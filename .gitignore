@@ -18,9 +18,8 @@ crash.log
 Thumbs.db
 apps/api/src/generated/
 
-# Terraform: variables con secretos (Google, Stripe, contraseña de RDS)
-*.tfvars
-!*.tfvars.example
+# Terraform: configuración del backend con tu cuenta y perfil (paso 28)
+backend.hcl
 
 # Vercel CLI (paso 34)
 .vercel/

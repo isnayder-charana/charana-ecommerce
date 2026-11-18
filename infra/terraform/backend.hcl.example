@@ -1,0 +1,4 @@
+# Copia este archivo como backend.hcl (ignorado por git) y pon tus valores.
+# El bucket sale de: terraform -chdir=infra/terraform/bootstrap output state_bucket
+bucket  = "charanatech-tfstate-123456789012"
+profile = "charanatech"
