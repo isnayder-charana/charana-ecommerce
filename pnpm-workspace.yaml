@@ -1,0 +1,19 @@
+# Qué carpetas son paquetes del monorepo.
+packages:
+  - 'apps/*'
+
+# Guardar versiones exactas (sin ^ ni ~) al hacer `pnpm add`.
+savePrefix: ''
+
+# Fallar si la versión de Node o pnpm no cumple "engines".
+engineStrict: true
+
+# Paquetes a los que permitimos ejecutar scripts de instalación (descargan binarios nativos).
+allowBuilds:
+  '@swc/core': true
+  '@parcel/watcher': true
+  '@biomejs/biome': true
+  '@prisma/engines': true
+  prisma: true
+  # Telemetría de @nestjs/swagger: no la necesitamos, se bloquea explícitamente.
+  '@scarf/scarf': false

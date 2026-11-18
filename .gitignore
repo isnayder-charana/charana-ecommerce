@@ -1,0 +1,30 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.terraform/
+*.tfstate
+*.tfstate.*
+# Variables de Terraform con secretos (por ejemplo, el de Google en el paso 16).
+*.tfvars
+!*.tfvars.example
+crash.log
+.DS_Store
+Thumbs.db
+apps/api/src/generated/
+
+# Terraform: variables con secretos (Google, Stripe, contraseña de RDS)
+*.tfvars
+!*.tfvars.example
+
+# Vercel CLI (paso 34)
+.vercel/
+
+# Reportes de Playwright (fase 5)
+playwright-report/
+test-results/

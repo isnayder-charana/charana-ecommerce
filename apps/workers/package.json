@@ -1,0 +1,34 @@
+{
+  "name": "@charanatech/workers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workers que consumen los eventos de pedidos desde SQS (Lambda en AWS, corredor local con LocalStack).",
+  "type": "module",
+  "scripts": {
+    "build": "swc src -d dist --strip-leading-paths --ignore \"**/*.spec.ts\"",
+    "dev": "pnpm build && pnpm --filter . run --parallel \"/^dev:/\"",
+    "dev:compile": "swc src -d dist --strip-leading-paths --ignore \"**/*.spec.ts\" --watch",
+    "dev:run": "node --env-file-if-exists=.env --watch dist/local.js",
+    "start": "node --env-file-if-exists=.env dist/local.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:cov": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.js --runInBand"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.1164.0",
+    "@aws-sdk/client-ses": "3.1164.0",
+    "@aws-sdk/client-sns": "3.1164.0",
+    "@aws-sdk/client-sqs": "3.1164.0",
+    "@aws-sdk/lib-dynamodb": "3.1164.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@swc/cli": "0.8.2",
+    "@swc/core": "1.16.22",
+    "@swc/jest": "0.2.39",
+    "@types/aws-lambda": "8.10.164",
+    "@types/jest": "30.0.0",
+    "jest": "30.5.2"
+  }
+}

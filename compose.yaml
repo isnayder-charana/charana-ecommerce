@@ -1,0 +1,103 @@
+# Servicios locales de CharanaTech / OrderHub.
+#   docker compose up -d                     → MySQL, DynamoDB Local y LocalStack (pnpm infra:up)
+#   docker compose --profile search up -d    → además OpenSearch (consume ~1 GB de RAM)
+# Cada imagen tiene versión fija para que todos tengan exactamente el mismo entorno.
+name: charanatech
+
+services:
+  # Catálogo y stock (en AWS será RDS MySQL 8.4).
+  mysql:
+    image: mysql:8.4.13
+    # Se enciende solo al abrir Docker, salvo que lo hayas apagado con `pnpm infra:down`.
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: charanatech
+      MYSQL_USER: charanatech
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-charanatech}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      TZ: UTC
+    ports:
+      - '${MYSQL_PORT:-3306}:3306'
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./infra/local/mysql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-p${MYSQL_ROOT_PASSWORD:-root}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Carrito y pedidos (en AWS será DynamoDB).
+  dynamodb:
+    image: amazon/dynamodb-local:3.3.2
+    restart: unless-stopped
+    command: ['-jar', 'DynamoDBLocal.jar', '-sharedDb', '-dbPath', '/home/dynamodblocal/data']
+    user: root
+    ports:
+      - '${DYNAMODB_PORT:-8000}:8000'
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+    healthcheck:
+      # La imagen no trae curl: abrimos el puerto con bash para saber si ya escucha.
+      test: ['CMD-SHELL', 'bash -c "exec 3<>/dev/tcp/127.0.0.1/8000" || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # EventBridge, SQS, SNS, SES y S3 simulados en un solo contenedor (fase 3).
+  # Necesita LOCALSTACK_AUTH_TOKEN en el archivo .env de la raíz (plan gratuito
+  # "Hobby" para uso no comercial: https://app.localstack.cloud).
+  localstack:
+    image: localstack/localstack:2026.10.7
+    restart: unless-stopped
+    environment:
+      SERVICES: events,sqs,sns,ses,s3,sts
+      # La misma región que usamos en AWS.
+      AWS_DEFAULT_REGION: us-east-2
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:-}
+    ports:
+      - '${LOCALSTACK_PORT:-4566}:4566'
+    volumes:
+      # Scripts que LocalStack ejecuta cuando está listo (crea el bus, las colas, etc.).
+      - ./infra/local/localstack:/etc/localstack/init/ready.d:ro
+    healthcheck:
+      # "Listo" = los scripts de inicio terminaron, no solo que el puerto responda.
+      # La imagen no trae curl: preguntamos con Python, que sí viene incluido.
+      test:
+        [
+          'CMD',
+          'python3',
+          '-c',
+          'import json, urllib.request as u; r = json.load(u.urlopen("http://127.0.0.1:4566/_localstack/init/ready")); exit(0 if r["completed"] else 1)',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      # La primera vez el script tarda un par de minutos (awslocal es lento):
+      # durante este tiempo los chequeos fallidos no cuentan.
+      start_period: 5m
+
+  # Búsqueda de productos (solo local; la demo pública usa FULLTEXT de MySQL).
+  opensearch:
+    image: opensearchproject/opensearch:3.9.0
+    profiles: ['search']
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: 'true'
+      DISABLE_INSTALL_DEMO_CONFIG: 'true'
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - '${OPENSEARCH_PORT:-9200}:9200'
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:9200/_cluster/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  mysql-data:
+  dynamodb-data:
+  opensearch-data:

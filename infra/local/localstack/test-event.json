@@ -1,0 +1,8 @@
+[
+  {
+    "EventBusName": "charanatech",
+    "Source": "charanatech.orders",
+    "DetailType": "OrderPaid",
+    "Detail": "{\"id\":\"prueba-evento-1\",\"type\":\"OrderPaid\",\"occurredAt\":\"2026-11-17T12:00:00.000Z\",\"orderId\":\"prueba-1\",\"customerId\":\"dev-ana\",\"status\":\"PAID\",\"total\":{\"cents\":5999,\"currency\":\"USD\"}}"
+  }
+]

@@ -1,0 +1,12 @@
+pnpm-lock.yaml
+dist/
+coverage/
+.next/
+.terraform/
+# Documentación escrita a mano, con tablas legibles en texto plano.
+docs/
+# Código generado por Prisma.
+apps/api/src/generated/
+# Generado por Next al compilar.
+apps/web/next-env.d.ts
+apps/web/.next/

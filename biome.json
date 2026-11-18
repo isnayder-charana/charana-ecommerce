@@ -1,0 +1,138 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**", "!**/dist", "!**/coverage", "!**/pnpm-lock.yaml"]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "assist": {
+    "enabled": false
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "useImportType": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/api/src/**/domain/**", "!**/*.spec.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@nestjs/*",
+                      "zod",
+                      "aws-jwt-verify",
+                      "aws-jwt-verify/*",
+                      "express",
+                      "@aws-sdk/*",
+                      "@prisma/*",
+                      "stripe"
+                    ],
+                    "message": "El dominio no depende de frameworks ni librerías de infraestructura."
+                  },
+                  {
+                    "group": ["**/application/**", "**/infrastructure/**"],
+                    "message": "El dominio no puede importar de application ni de infrastructure (las flechas apuntan hacia adentro)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/api/src/**/application/**", "!**/*.spec.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@nestjs/*",
+                      "express",
+                      "aws-jwt-verify",
+                      "aws-jwt-verify/*",
+                      "@aws-sdk/*",
+                      "@prisma/*",
+                      "stripe"
+                    ],
+                    "message": "Los casos de uso no dependen de Nest ni de HTTP: se conectan en el *.module.ts."
+                  },
+                  {
+                    "group": ["**/infrastructure/**", "!**/test/**"],
+                    "message": "La aplicación no puede importar adaptadores: define un puerto (interfaz) y que infrastructure lo implemente."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/workers/src/notifications/**",
+        "apps/workers/src/fulfillment/**",
+        "apps/workers/src/alerts/**",
+        "!**/*.spec.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@aws-sdk/*", "aws-lambda"],
+                    "message": "La lógica de un worker no habla con AWS directamente: recibe un puerto (interfaz) desde consumers.ts."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.spec.ts", "**/*.e2e-spec.ts", "apps/api/test/**", "apps/workers/test/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    }
+  ]
+}

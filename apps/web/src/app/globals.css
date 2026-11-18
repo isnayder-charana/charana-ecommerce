@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de diseño de CharanaTech.
+ * Regla: cada color tiene UNA función. Si un color no comunica nada, no se usa.
+ *
+ * Tailwind v4 convierte cada variable de @theme en clases:
+ *   --color-action  → bg-action, text-action, border-action, ring-action…
+ *   --font-display  → font-display
+ */
+@theme {
+  /* Neutros: la estructura de la página */
+  --color-page: #ededed; /* fondo general, gris claro */
+  --color-surface: #ffffff; /* bloques: cabecera, tarjetas, paneles */
+  --color-sunken: #f5f5f5; /* recuadro de la foto, buscador */
+  --color-ink: #1f1f1f; /* texto principal */
+  --color-muted: #6b6b6b; /* texto secundario, precio anterior */
+  --color-line: #e0e0e0; /* bordes y divisores */
+
+  /* Azul: solo lo que se puede hacer (botones, enlaces, foco) */
+  --color-action: #2f6fed;
+  --color-action-hover: #2459c4;
+  --color-action-soft: #e8f0fe; /* botón secundario, como "Agregar al carrito" */
+
+  /* Verde: lo que es bueno para el cliente (descuento, envío gratis, stock) */
+  --color-deal: #00a650;
+
+  /* Naranja: solo la etiqueta "Más vendido" */
+  --color-badge: #ff7733;
+
+  /* Rojo: errores y "sin stock" */
+  --color-danger: #d93025;
+
+  /* Tipografías (las variables las crea next/font en layout.tsx) */
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-display: var(--font-chakra), system-ui, sans-serif;
+
+  --radius-card: 10px;
+  --radius-control: 6px;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-page font-sans text-ink;
+  }
+
+  /* Foco visible para quien navega con teclado */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-action;
+  }
+}

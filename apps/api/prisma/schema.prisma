@@ -1,0 +1,34 @@
+// Esquema de la base de datos MySQL del catálogo.
+// Las reglas de negocio NO viven aquí: viven en el dominio (Product, Money, Sku).
+// Esta tabla solo guarda los datos "planos" (ProductPrimitives).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Product {
+  id          String   @id @db.Char(36)
+  sku         String   @unique @db.VarChar(32)
+  name        String   @db.VarChar(120)
+  description String   @db.Text
+  category    String   @db.VarChar(32)
+  priceCents  Int      @map("price_cents") @db.UnsignedInt
+  currency    String   @db.Char(3)
+  stock       Int      @db.UnsignedInt
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  /// Bloqueo optimista: se incrementa en cada escritura.
+  version     Int      @default(1) @db.UnsignedInt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([category, name])
+  @@fulltext([name, description])
+  @@map("products")
+}
