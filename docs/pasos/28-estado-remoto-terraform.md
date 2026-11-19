@@ -117,6 +117,16 @@ Debe decir **`No changes. Your infrastructure matches the configuration.`** Eso 
 
 Si en vez de eso quiere **crear** el User Pool, **no hagas apply**: significa que la migración no copió el estado. Pégame la salida.
 
+#### Lo que pasó en tu PC: "drift" en el proveedor de Google
+
+En la primera prueba, el `plan` no dijo "No changes" sino `0 to add, 1 to change`: quería **quitar** seis valores de `provider_details` del proveedor de Google (`authorize_url`, `token_url`, `oidc_issuer`…).
+
+Esa es la señal de que la migración **sí funcionó**: Terraform encontró el User Pool y los demás recursos en el estado de S3 (0 to add). El cambio era otra cosa, un *drift*: cuando creamos el proveedor en el paso 16, Cognito completó esos seis valores por su cuenta. Nuestro código no los mencionaba, así que Terraform creía que sobraban.
+
+La solución fue escribirlos en `google.tf` con los mismos valores que guarda AWS. Así el código describe exactamente lo que existe, y el `plan` vuelve a decir **No changes**.
+
+Regla general: si un `plan` quiere cambiar algo que tú no tocaste, no hagas `apply` a ciegas. Primero entiende de dónde viene la diferencia.
+
 ### 7. Guardar el lockfile del bootstrap y subirlo
 
 `terraform init` creó `bootstrap/.terraform.lock.hcl`. Súbelo, igual que el de `infra/terraform`:
