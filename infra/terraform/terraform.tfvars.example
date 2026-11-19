@@ -12,3 +12,9 @@ db_password = "..."
 internal_api_key = "..."
 # La misma STRIPE_SECRET_KEY de apps/api/.env (sk_test_...)
 stripe_secret_key = "sk_test_..."
+
+# --- Paso 30 ---
+# El secreto del webhook que creas en el Dashboard de Stripe para la URL de la API.
+stripe_webhook_secret = "whsec_..."
+# La etiqueta de la imagen que subiste a ECR (git rev-parse --short HEAD).
+api_image_tag = "abc1234"

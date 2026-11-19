@@ -26,6 +26,21 @@ resource "aws_vpc_security_group_ingress_rule" "db_mysql" {
   to_port           = 3306
 }
 
+# Paso 30: la Lambda de la API no tiene una IP fija (cambia en cada arranque y
+# AWS no publica un rango corto), así que el puerto 3306 queda abierto a todo
+# internet. Lo que protege la base ahora es: TLS obligatorio (nadie lee el
+# tráfico), contraseña de 40 caracteres aleatorios, y el usuario solo existe
+# para esta base. La alternativa "de empresa" (Lambda en subred privada + NAT o
+# RDS Proxy) cuesta ~USD 32/mes más.
+resource "aws_vpc_security_group_ingress_rule" "db_mysql_lambda" {
+  security_group_id = aws_security_group.db.id
+  description       = "MySQL desde la Lambda de la API (IP variable), solo con TLS"
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 3306
+  to_port           = 3306
+}
+
 # Ajustes del servidor MySQL. El importante: rechazar conexiones sin TLS.
 resource "aws_db_parameter_group" "mysql" {
   name        = "charanatech-mysql84"

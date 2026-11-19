@@ -42,5 +42,23 @@ output "ssm_parameters" {
     aws_ssm_parameter.database_url.name,
     aws_ssm_parameter.internal_api_key.name,
     aws_ssm_parameter.stripe_secret_key.name,
+    aws_ssm_parameter.stripe_webhook_secret.name,
   ]
+}
+
+# --- Paso 30 --------------------------------------------------------------------
+
+output "api_url" {
+  description = "URL pública de la API (NEXT_PUBLIC_API_URL de la tienda en el paso 34)."
+  value       = aws_apigatewayv2_api.api.api_endpoint
+}
+
+output "stripe_webhook_url" {
+  description = "La URL que pegas en Stripe al crear el webhook."
+  value       = "${aws_apigatewayv2_api.api.api_endpoint}/api/payments/webhook"
+}
+
+output "ecr_repository_url" {
+  description = "Adónde se sube la imagen de la API (docker push)."
+  value       = aws_ecr_repository.api.repository_url
 }
