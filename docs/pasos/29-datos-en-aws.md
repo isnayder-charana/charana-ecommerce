@@ -199,9 +199,11 @@ Debe fallar con *"Connections using insecure transport are prohibited while --re
 aws dynamodb describe-table --table-name charanatech --profile charanatech \
   --query "Table.{estado:TableStatus,indices:GlobalSecondaryIndexes[].IndexName,stream:StreamSpecification}"
 aws dynamodb describe-time-to-live --table-name charanatech --profile charanatech
-aws ssm get-parameters-by-path --path /charanatech/prod --profile charanatech \
+MSYS_NO_PATHCONV=1 aws ssm get-parameters-by-path --path /charanatech/prod --profile charanatech \
   --query "Parameters[].{nombre:Name,tipo:Type}"
 ```
+
+> Sin `MSYS_NO_PATHCONV=1`, Git Bash convierte `/charanatech/prod` en `C:/Program Files/Git/charanatech/prod` y AWS responde *"The parameter doesn't meet the parameter name requirements"*. Cualquier argumento que empiece con `/` sufre lo mismo.
 
 Debe salir: la tabla `ACTIVE` con `GSI1` y el stream `NEW_IMAGE`, el TTL `ENABLED` sobre `expiresAt`, y los 3 parámetros como `SecureString`. Sin `--with-decryption` no se ve el valor, y así está bien.
 
