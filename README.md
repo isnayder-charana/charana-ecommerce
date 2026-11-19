@@ -86,3 +86,4 @@ pnpm install
 28. [Paso 26 (fase 3): alertas de la DLQ y la arquitectura completa](docs/pasos/26-alertas-dlq.md)
 29. [Paso 27 (fase 4): el código sube a GitHub](docs/pasos/27-repositorio-github.md)
 30. [Paso 28 (fase 4): el estado de Terraform se muda a S3](docs/pasos/28-estado-remoto-terraform.md)
+31. [Paso 29 (fase 4): los datos se mudan a AWS (RDS, DynamoDB y SSM)](docs/pasos/29-datos-en-aws.md)
