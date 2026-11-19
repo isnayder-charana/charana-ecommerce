@@ -88,3 +88,4 @@ pnpm install
 30. [Paso 28 (fase 4): el estado de Terraform se muda a S3](docs/pasos/28-estado-remoto-terraform.md)
 31. [Paso 29 (fase 4): los datos se mudan a AWS (RDS, DynamoDB y SSM)](docs/pasos/29-datos-en-aws.md)
 32. [Paso 30 (fase 4): la API sale a internet en Lambda](docs/pasos/30-api-en-lambda.md)
+33. [Paso 31 (fase 4): los eventos y los workers se mudan a AWS](docs/pasos/31-eventos-en-aws.md)

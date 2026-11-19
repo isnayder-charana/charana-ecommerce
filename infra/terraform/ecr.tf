@@ -17,10 +17,8 @@ resource "aws_ecr_repository" "api" {
 
 # Cada imagen pesa ~150 MB y ECR cobra por GB guardado: nos quedamos con las
 # 10 más recientes y borramos el resto.
-resource "aws_ecr_lifecycle_policy" "api" {
-  repository = aws_ecr_repository.api.name
-
-  policy = jsonencode({
+locals {
+  keep_last_10_images = jsonencode({
     rules = [{
       rulePriority = 1
       description  = "Conservar solo las 10 imagenes mas recientes"
@@ -32,4 +30,24 @@ resource "aws_ecr_lifecycle_policy" "api" {
       action = { type = "expire" }
     }]
   })
+}
+
+resource "aws_ecr_lifecycle_policy" "api" {
+  repository = aws_ecr_repository.api.name
+  policy     = local.keep_last_10_images
+}
+
+# Paso 31: la imagen de los workers (una sola para las tres Lambdas).
+resource "aws_ecr_repository" "workers" {
+  name                 = "charanatech-workers"
+  image_tag_mutability = "IMMUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+resource "aws_ecr_lifecycle_policy" "workers" {
+  repository = aws_ecr_repository.workers.name
+  policy     = local.keep_last_10_images
 }

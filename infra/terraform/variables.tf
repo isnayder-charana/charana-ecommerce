@@ -110,3 +110,22 @@ variable "api_image_tag" {
   type        = string
   default     = null
 }
+
+# --- Paso 31: eventos y workers --------------------------------------------------
+
+variable "workers_image_tag" {
+  description = "Etiqueta de la imagen de los workers en ECR (la imprime scripts/ecr-push.sh workers)."
+  type        = string
+  default     = null
+}
+
+variable "fulfillment_delay_seconds" {
+  description = "Segundos que cada pedido espera \"en el almacén\" y \"en camino\" (envío simulado)."
+  type        = number
+  default     = 15
+
+  validation {
+    condition     = var.fulfillment_delay_seconds >= 0 && var.fulfillment_delay_seconds <= 900
+    error_message = "SQS acepta entre 0 y 900 segundos de retraso."
+  }
+}

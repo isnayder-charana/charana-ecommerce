@@ -62,3 +62,23 @@ output "ecr_repository_url" {
   description = "Adónde se sube la imagen de la API (docker push)."
   value       = aws_ecr_repository.api.repository_url
 }
+
+# --- Paso 31 --------------------------------------------------------------------
+
+output "workers_ecr_repository_url" {
+  description = "Adónde se sube la imagen de los workers."
+  value       = aws_ecr_repository.workers.repository_url
+}
+
+output "event_bus" {
+  description = "El bus de EventBridge de los pedidos."
+  value       = aws_cloudwatch_event_bus.orders.name
+}
+
+output "dead_letter_queues" {
+  description = "Colas de fallidos: si algo aparece aquí, un evento no se pudo procesar."
+  value = concat(
+    [for queue in aws_sqs_queue.worker_dlq : queue.name],
+    [aws_sqs_queue.outbox_relay_dlq.name],
+  )
+}
