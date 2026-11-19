@@ -1,0 +1,18 @@
+# Lo que NUNCA entra a una imagen de Docker (paso 30): secretos, dependencias
+# de tu PC (se instalan dentro de la imagen) y cosas que no hacen falta.
+**/.env
+**/.env.*
+!**/.env.example
+**/*.tfvars
+**/*.tfstate*
+**/backend.hcl
+**/node_modules
+**/dist
+**/coverage
+**/.next
+**/.terraform
+.git
+docs
+infra
+apps/web
+apps/workers
