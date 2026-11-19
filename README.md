@@ -84,3 +84,5 @@ pnpm install
 26. [Paso 24 (fase 3): correos al cliente con SES](docs/pasos/24-correos-ses.md)
 27. [Paso 25 (fase 3): el pedido avanza solo (envío automático)](docs/pasos/25-envio-automatico.md)
 28. [Paso 26 (fase 3): alertas de la DLQ y la arquitectura completa](docs/pasos/26-alertas-dlq.md)
+29. [Paso 27 (fase 4): el código sube a GitHub](docs/pasos/27-repositorio-github.md)
+30. [Paso 28 (fase 4): el estado de Terraform se muda a S3](docs/pasos/28-estado-remoto-terraform.md)

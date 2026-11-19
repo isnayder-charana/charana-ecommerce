@@ -11,8 +11,19 @@ terraform {
     }
   }
 
-  # Por ahora el estado (terraform.tfstate) vive en tu PC y está en .gitignore.
-  # En la fase 4 lo movemos a S3 para que GitHub Actions también pueda usarlo.
+  # Paso 28: el estado vive en S3 (bucket creado por infra/terraform/bootstrap),
+  # así tu PC y GitHub Actions trabajan sobre la misma "memoria".
+  # `use_lockfile` crea un archivo .tflock junto al estado mientras alguien
+  # hace plan/apply: si otro intenta a la vez, espera en vez de pisarlo.
+  #
+  # El nombre del bucket y el perfil no van aquí (los bloques backend no
+  # aceptan variables): se pasan con `terraform init -backend-config=backend.hcl`.
+  backend "s3" {
+    key          = "charanatech/terraform.tfstate"
+    region       = "us-east-2"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
