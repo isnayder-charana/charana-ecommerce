@@ -53,7 +53,7 @@ variable "db_allowed_cidrs" {
 variable "secrets_version" {
   description = "Súbelo en 1 para volver a enviar a AWS los secretos de abajo (rotarlos)."
   type        = number
-  default     = 1
+  default     = 2 # paso 30: DATABASE_URL ahora exige TLS con el certificado de RDS
 }
 
 variable "db_password" {
@@ -88,4 +88,25 @@ variable "stripe_secret_key" {
     condition     = var.stripe_secret_key == null || startswith(coalesce(var.stripe_secret_key, "x"), "sk_test_")
     error_message = "Solo se aceptan claves de prueba (sk_test_...)."
   }
+}
+
+# --- Paso 30: la API en Lambda --------------------------------------------------
+
+variable "stripe_webhook_secret" {
+  description = "Secreto del webhook que creas en el Dashboard de Stripe para la URL de la API (whsec_...)."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+
+  validation {
+    condition     = var.stripe_webhook_secret == null || can(regex("^whsec_[A-Za-z0-9]+$", coalesce(var.stripe_webhook_secret, "x")))
+    error_message = "El secreto del webhook empieza con whsec_."
+  }
+}
+
+variable "api_image_tag" {
+  description = "Etiqueta de la imagen de la API en ECR: el commit corto de git (git rev-parse --short HEAD)."
+  type        = string
+  default     = null
 }

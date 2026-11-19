@@ -12,10 +12,13 @@ locals {
 }
 
 resource "aws_ssm_parameter" "database_url" {
-  name             = "${local.ssm_prefix}/database-url"
-  description      = "DATABASE_URL de la API (MySQL en RDS)"
-  type             = "SecureString"
-  value_wo         = "mysql://${aws_db_instance.main.username}:${var.db_password}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${aws_db_instance.main.db_name}"
+  name        = "${local.ssm_prefix}/database-url"
+  description = "DATABASE_URL de la API (MySQL en RDS)"
+  type        = "SecureString"
+  # sslcert: el certificado de RDS que viene dentro de la imagen Docker (paso 30).
+  # sslaccept=strict: si el servidor no presenta un certificado firmado por esa
+  # CA y con ese nombre, la API se niega a conectar.
+  value_wo         = "mysql://${aws_db_instance.main.username}:${var.db_password}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${aws_db_instance.main.db_name}?sslcert=/app/certs/rds-ca.pem&sslaccept=strict"
   value_wo_version = var.secrets_version
 }
 
@@ -32,5 +35,15 @@ resource "aws_ssm_parameter" "stripe_secret_key" {
   description      = "STRIPE_SECRET_KEY (modo prueba, sk_test_...)"
   type             = "SecureString"
   value_wo         = var.stripe_secret_key
+  value_wo_version = var.secrets_version
+}
+
+# Paso 30: el secreto con el que Stripe firma los avisos que manda a la API en
+# AWS. Es distinto del de `stripe listen` en tu PC: cada endpoint tiene el suyo.
+resource "aws_ssm_parameter" "stripe_webhook_secret" {
+  name             = "${local.ssm_prefix}/stripe-webhook-secret"
+  description      = "STRIPE_WEBHOOK_SECRET del endpoint de la API en AWS (whsec_...)"
+  type             = "SecureString"
+  value_wo         = var.stripe_webhook_secret
   value_wo_version = var.secrets_version
 }
