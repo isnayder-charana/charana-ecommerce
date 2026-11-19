@@ -6,7 +6,7 @@ google_client_secret = "GOCSPX-..."
 # --- Paso 29 ---
 # Tu IP pública con /32 (la ves con: curl -s https://checkip.amazonaws.com).
 db_allowed_cidrs = ["190.12.34.56/32"]
-# openssl rand -hex 24
+# openssl rand -hex 20   (40 caracteres: RDS acepta como máximo 41)
 db_password = "..."
 # La misma INTERNAL_API_KEY de apps/api/.env
 internal_api_key = "..."

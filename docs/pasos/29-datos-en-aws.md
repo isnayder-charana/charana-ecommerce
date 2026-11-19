@@ -24,7 +24,7 @@ Así que la base tiene IP pública, con tres barreras:
 
 1. **Firewall (security group):** solo deja entrar al puerto 3306 desde las IPs de `db_allowed_cidrs`. Hoy es **solo tu IP**. En el paso 30 lo abriremos para las Lambdas, que no tienen IP fija.
 2. **TLS obligatorio:** el parámetro `require_secure_transport = 1` hace que MySQL rechace cualquier conexión sin cifrar. Lo vas a comprobar tú mismo.
-3. **Contraseña larga y aleatoria:** 48 caracteres generados con `openssl`.
+3. **Contraseña larga y aleatoria:** 40 caracteres generados con `openssl` (RDS para MySQL acepta como máximo 41).
 
 En una entrevista: *"En producción real iría en subred privada con VPC endpoints. Aquí prioricé el costo y lo compensé con TLS obligatorio, firewall y una contraseña aleatoria."*
 
@@ -114,8 +114,10 @@ curl -s https://checkip.amazonaws.com
 Genera la contraseña de MySQL:
 
 ```bash
-openssl rand -hex 24
+openssl rand -hex 20
 ```
+
+Son 40 caracteres. No uses más: la contraseña maestra de RDS para MySQL admite como máximo 41, y con más el `apply` falla con *"is not a valid password because it is longer than 41 characters"*.
 
 Abre `infra/terraform/terraform.tfvars` (el que ya tiene lo de Google) y agrega al final, con tus valores:
 

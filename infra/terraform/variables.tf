@@ -57,15 +57,15 @@ variable "secrets_version" {
 }
 
 variable "db_password" {
-  description = "Contraseña del usuario charanatech de MySQL. Genérala con: openssl rand -hex 24"
+  description = "Contraseña del usuario charanatech de MySQL. Genérala con: openssl rand -hex 20 (40 caracteres; RDS acepta como máximo 41)"
   type        = string
   sensitive   = true
   ephemeral   = true
   default     = null
 
   validation {
-    condition     = var.db_password == null || can(regex("^[A-Za-z0-9]{24,}$", var.db_password))
-    error_message = "Usa al menos 24 letras o números (sin símbolos: van dentro de una URL)."
+    condition     = var.db_password == null || can(regex("^[A-Za-z0-9]{24,41}$", var.db_password))
+    error_message = "Usa entre 24 y 41 letras o números (RDS no acepta más de 41, y sin símbolos porque van dentro de una URL)."
   }
 }
 
