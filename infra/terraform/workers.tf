@@ -10,9 +10,9 @@ locals {
     notifications = {
       DYNAMODB_TABLE = aws_dynamodb_table.main.name
       STORE_URL      = var.store_urls[0]
-      # "log": el correo se anota en el log en vez de enviarse. En el paso 32,
-      # con el remitente verificado en SES, pasa a "ses".
-      EMAIL_DELIVERY = "log"
+      # Paso 32: envía de verdad con SES (en el paso 31 era "log").
+      EMAIL_DELIVERY = "ses"
+      EMAIL_FROM     = var.ses_sender_email
     }
     fulfillment = {
       DYNAMODB_TABLE = aws_dynamodb_table.main.name
@@ -53,6 +53,25 @@ data "aws_iam_policy_document" "queue_worker" {
       test     = "ForAllValues:StringLike"
       variable = "dynamodb:LeadingKeys"
       values   = ["WORKER_EVENT#${each.key}#*"]
+    }
+  }
+
+  # Solo notifications envía correos, y solo desde el remitente de la tienda.
+  # En el sandbox, SES revisa el permiso también contra cada destinatario
+  # verificado: por eso el recurso es identity/* y lo que se limita es el remitente.
+  dynamic "statement" {
+    for_each = each.key == "notifications" ? [1] : []
+
+    content {
+      sid       = "SendEmail"
+      actions   = ["ses:SendEmail"]
+      resources = ["arn:aws:ses:${var.aws_region}:${data.aws_caller_identity.current.account_id}:identity/*"]
+
+      condition {
+        test     = "StringLike"
+        variable = "ses:FromAddress"
+        values   = [var.ses_sender_email, "*<${var.ses_sender_email}>"]
+      }
     }
   }
 

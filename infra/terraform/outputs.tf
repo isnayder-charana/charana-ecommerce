@@ -82,3 +82,15 @@ output "dead_letter_queues" {
     [aws_sqs_queue.outbox_relay_dlq.name],
   )
 }
+
+# --- Paso 32 --------------------------------------------------------------------
+
+output "alerts_topic" {
+  description = "Tema SNS de las alarmas (debes confirmar la suscripción desde tu correo)."
+  value       = aws_sns_topic.alerts.name
+}
+
+output "dlq_alarms" {
+  description = "Una alarma de CloudWatch por cada DLQ."
+  value       = [for alarm in aws_cloudwatch_metric_alarm.dlq : alarm.alarm_name]
+}

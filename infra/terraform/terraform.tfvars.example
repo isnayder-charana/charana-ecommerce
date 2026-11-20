@@ -22,3 +22,10 @@ api_image_tag = "abc1234"
 # --- Paso 31 ---
 # La etiqueta de la imagen de los workers (la imprime scripts/ecr-push.sh workers).
 workers_image_tag = "abc1234"
+
+# --- Paso 32 ---
+# Quién recibe las alarmas y desde qué correo envía la tienda (puede ser el mismo).
+alert_email      = "tu-correo@gmail.com"
+ses_sender_email = "tu-correo@gmail.com"
+# Opcional: otros correos tuyos que quieras usar para probar compras.
+# ses_verified_recipients = ["otro-correo@gmail.com"]

@@ -129,3 +129,32 @@ variable "fulfillment_delay_seconds" {
     error_message = "SQS acepta entre 0 y 900 segundos de retraso."
   }
 }
+
+# --- Paso 32: correos y alertas -------------------------------------------------
+# Van en terraform.tfvars (que no se sube al repo): así tu correo no queda público.
+
+variable "alert_email" {
+  description = "Correo que recibe las alarmas de las DLQ (hay que confirmar la suscripción)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.alert_email))
+    error_message = "alert_email debe ser un correo, por ejemplo tu-nombre@gmail.com."
+  }
+}
+
+variable "ses_sender_email" {
+  description = "Remitente de los correos de la tienda. SES manda un enlace para verificarlo."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.ses_sender_email))
+    error_message = "ses_sender_email debe ser un correo, por ejemplo tu-nombre@gmail.com."
+  }
+}
+
+variable "ses_verified_recipients" {
+  description = "Correos extra que pueden recibir mensajes mientras SES esté en sandbox (cada uno se verifica con un enlace)."
+  type        = list(string)
+  default     = []
+}
