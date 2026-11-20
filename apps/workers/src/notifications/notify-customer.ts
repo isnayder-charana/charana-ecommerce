@@ -12,7 +12,8 @@ export interface NotifyCustomerDeps {
 
 /**
  * Worker `notifications`: envía un correo al cliente en cada cambio de su pedido.
- * Si SES falla, el error sube: el mensaje se reintenta y, tras 3 fallos, va a la DLQ.
+ * Si SES falla, el error sube: el mensaje se reintenta y, tras 3 fallos, va a la DLQ
+ * (y la alarma del paso 32 te avisa por correo).
  */
 export function notifyCustomer({
   emails,
@@ -25,7 +26,9 @@ export function notifyCustomer({
       if (!event.customerEmail) logger.info(`Pedido ${event.orderId} sin correo: no se avisa`);
       return;
     }
-    await emails.send(email);
-    logger.info(`Correo "${email.subject}" enviado a ${maskEmail(email.to)}`);
+    // Si no se envió a propósito ("skipped"), el remitente ya dejó el motivo en el log.
+    if ((await emails.send(email)) === 'sent') {
+      logger.info(`Correo "${email.subject}" enviado a ${maskEmail(email.to)}`);
+    }
   };
 }

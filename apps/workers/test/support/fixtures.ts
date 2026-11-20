@@ -1,5 +1,5 @@
 /** Datos y dobles de prueba compartidos por los tests de los workers. */
-import type { Email, EmailSender } from '../../src/shared/email.js';
+import type { Email, EmailOutcome, EmailSender } from '../../src/shared/email.js';
 import type { OrdersApi } from '../../src/fulfillment/orders-api.js';
 import type { SQSRecord } from 'aws-lambda';
 import type { Logger } from '../../src/shared/logger.js';
@@ -60,9 +60,13 @@ export class FakeEmailSender implements EmailSender {
   readonly sent: Email[] = [];
   failWith?: Error;
 
-  async send(email: Email): Promise<void> {
+  /** Lo que responde el envío (por defecto, enviado). */
+  outcome: EmailOutcome = 'sent';
+
+  async send(email: Email): Promise<EmailOutcome> {
     if (this.failWith) throw this.failWith;
     this.sent.push(email);
+    return this.outcome;
   }
 }
 

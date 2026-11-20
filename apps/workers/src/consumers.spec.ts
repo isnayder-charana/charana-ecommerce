@@ -43,6 +43,19 @@ describe('Workers', () => {
     expect(logger.lines).toEqual(['Pedido o-1 sin correo: no se avisa']);
   });
 
+  it('notifications no dice "enviado" si el correo se omitió a propósito', async () => {
+    const emails = new FakeEmailSender();
+    emails.outcome = 'skipped';
+    const logger = memoryLogger();
+
+    await notifyCustomer({ emails, logger, storeUrl })({
+      ...orderEvent,
+      customerEmail: 'ana@correo.com',
+    });
+
+    expect(logger.lines).toEqual([]);
+  });
+
   it('si SES falla, el error sube para que el mensaje se reintente', async () => {
     const emails = new FakeEmailSender();
     emails.failWith = new Error('SES no responde');

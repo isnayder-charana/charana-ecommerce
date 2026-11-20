@@ -7,9 +7,15 @@ export interface Email {
   html: string;
 }
 
+/**
+ * Qué pasó con el correo. "skipped" = no se envió a propósito (modo log, o
+ * SES en sandbox con un destinatario sin verificar): no es un error que reintentar.
+ */
+export type EmailOutcome = 'sent' | 'skipped';
+
 /** PUERTO: enviar correos. En AWS (y en LocalStack) lo implementa SES. */
 export interface EmailSender {
-  send(email: Email): Promise<void>;
+  send(email: Email): Promise<EmailOutcome>;
 }
 
 /** "ana.maria@correo.com" → "a***@correo.com": así el log no guarda correos completos. */

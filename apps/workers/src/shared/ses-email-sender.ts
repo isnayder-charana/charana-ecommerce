@@ -1,5 +1,5 @@
-import { SendEmailCommand, SESClient } from '@aws-sdk/client-ses';
-import { type Email, type EmailSender, maskEmail } from './email.js';
+import { MessageRejected, SendEmailCommand, SESClient } from '@aws-sdk/client-ses';
+import { type Email, type EmailOutcome, type EmailSender, maskEmail } from './email.js';
 import type { WorkersEnv } from './env.js';
 import { consoleLogger, type Logger } from './logger.js';
 
@@ -7,14 +7,41 @@ import { consoleLogger, type Logger } from './logger.js';
  * ADAPTADOR: envía con Amazon SES (API v1, la que incluye LocalStack gratis).
  * El remitente (`from`) debe estar verificado en SES; en local lo verifica el
  * script de LocalStack (no-reply@charanatech.local).
+ *
+ * Sandbox de SES (paso 32): mientras la cuenta no tiene acceso de producción,
+ * SES solo entrega a correos verificados y rechaza los demás con
+ * MessageRejected. Ese rechazo no se arregla reintentando, así que se anota en
+ * el log y el mensaje se da por procesado (no va a la DLQ). Si el rechazado es
+ * el REMITENTE, en cambio, es un error de configuración: sube y salta la alarma.
  */
 export class SesEmailSender implements EmailSender {
   constructor(
     private readonly ses: Pick<SESClient, 'send'>,
     private readonly from: string,
+    private readonly logger: Logger = consoleLogger('correo'),
   ) {}
 
-  async send({ to, subject, text, html }: Email): Promise<void> {
+  async send(email: Email): Promise<EmailOutcome> {
+    try {
+      await this.deliver(email);
+      return 'sent';
+    } catch (error) {
+      if (!this.isUnverifiedRecipient(error, email.to)) throw error;
+      this.logger.info(
+        `[sin enviar: SES en sandbox] ${maskEmail(email.to)} no está verificado; "${email.subject}" no se envía`,
+      );
+      return 'skipped';
+    }
+  }
+
+  /** SES nombra en el mensaje las direcciones que no pasaron la verificación. */
+  private isUnverifiedRecipient(error: unknown, to: string): boolean {
+    if (!(error instanceof MessageRejected)) return false;
+    const failed = error.message.toLowerCase();
+    return failed.includes(to.toLowerCase()) && !failed.includes(this.from.toLowerCase());
+  }
+
+  private async deliver({ to, subject, text, html }: Email): Promise<void> {
     await this.ses.send(
       new SendEmailCommand({
         Source: `CharanaTech <${this.from}>`,
@@ -39,8 +66,9 @@ export class SesEmailSender implements EmailSender {
 export class LoggingEmailSender implements EmailSender {
   constructor(private readonly logger: Logger) {}
 
-  async send({ to, subject }: Email): Promise<void> {
+  async send({ to, subject }: Email): Promise<EmailOutcome> {
     this.logger.info(`[sin enviar: EMAIL_DELIVERY=log] "${subject}" para ${maskEmail(to)}`);
+    return 'skipped';
   }
 }
 
@@ -58,5 +86,5 @@ export function createEmailSender(
     endpoint: env.SES_ENDPOINT,
     ...(env.SES_ENDPOINT && { credentials: { accessKeyId: 'test', secretAccessKey: 'test' } }),
   });
-  return new SesEmailSender(ses, env.EMAIL_FROM);
+  return new SesEmailSender(ses, env.EMAIL_FROM, logger);
 }
