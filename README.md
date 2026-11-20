@@ -96,11 +96,11 @@ pnpm install
 
 Las fotos de los productos son de [Unsplash](https://unsplash.com) y se usan bajo su licencia gratuita. Gracias a sus autores:
 
-| Producto                     | Archivo          | Foto de     |
-| ---------------------------- | ---------------- | ----------- |
-| Audífonos inalámbricos Pulse | `ct-aud-001.jpg` | _pendiente_ |
-| Cargador GaN 65W             | `ct-chg-001.jpg` | _pendiente_ |
-| Cable USB-C trenzado 2 m     | `ct-cab-001.jpg` | _pendiente_ |
-| Teclado mecánico compacto    | `ct-per-001.jpg` | _pendiente_ |
-| Mouse ergonómico vertical    | `ct-per-002.jpg` | _pendiente_ |
-| SSD portátil 1 TB            | `ct-sto-001.jpg` | _pendiente_ |
+| Producto                     | Archivo          | Foto de                                                |
+| ---------------------------- | ---------------- | ------------------------------------------------------ |
+| Audífonos inalámbricos Pulse | `ct-aud-001.jpg` | [Cosmin Ursea](https://unsplash.com/@cosminursea)      |
+| Cargador GaN 65W             | `ct-chg-001.jpg` | [Andrey Matveev](https://unsplash.com/@zelebb)         |
+| Cable USB-C trenzado 2 m     | `ct-cab-001.jpg` | [Mika Baumeister](https://unsplash.com/@kommumikation) |
+| Teclado mecánico compacto    | `ct-per-001.jpg` | [Hannes Köttner](https://unsplash.com/@hk_filmografy)  |
+| Mouse ergonómico vertical    | `ct-per-002.jpg` | [Cemrecan Yurtman](https://unsplash.com/@cmrcn_)       |
+| SSD portátil 1 TB            | `ct-sto-001.jpg` | [Cemrecan Yurtman](https://unsplash.com/@cmrcn_)       |
