@@ -11,16 +11,23 @@ const schema = z.object({
   SQS_ENDPOINT: url.optional(),
   /** Solo en local (LocalStack). En AWS se deja vacía. */
   SES_ENDPOINT: url.optional(),
+  /**
+   * "ses" envía de verdad; "log" solo anota el correo en el log. En AWS empieza
+   * en "log" (paso 31) hasta que SES tenga el remitente verificado (paso 32).
+   */
+  EMAIL_DELIVERY: z.enum(['ses', 'log']).default('ses'),
   /** Remitente de los correos: debe estar verificado en SES. */
   EMAIL_FROM: z.email().default('no-reply@charanatech.local'),
-  /** Para el enlace "Ver mi pedido" de los correos. */
   /** La API de pedidos (el worker fulfillment le pide avanzar el pedido). */
   API_URL: url.default('http://localhost:3000/api').transform((u) => u.replace(/\/+$/, '')),
   /** La misma clave que INTERNAL_API_KEY de apps/api/.env. */
   INTERNAL_API_KEY: z.string().min(32, 'mínimo 32 caracteres').optional(),
+  /** Para el enlace "Ver mi pedido" de los correos. */
   STORE_URL: url.default('http://localhost:3001').transform((u) => u.replace(/\/+$/, '')),
   /** Solo en local (LocalStack). En AWS las alertas las da CloudWatch (fase 4). */
   SNS_ENDPOINT: url.optional(),
+  /** El bus donde el relé del outbox publica los eventos (paso 31). */
+  EVENT_BUS_NAME: z.string().min(1).default('charanatech'),
   /** Tema SNS donde se avisa al administrador (paso 26). */
   ALERTS_TOPIC: z.string().min(1).default('charanatech-alerts'),
   /** Cada cuántos segundos se revisan las DLQ en tu PC. */

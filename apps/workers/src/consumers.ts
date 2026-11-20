@@ -21,18 +21,35 @@ export interface WorkerDeps {
   orders: OrdersApi;
 }
 
-/** Los workers de la tienda, ya conectados. Los usan las Lambdas y el corredor local. */
-export function buildConsumers({ processed, emails, storeUrl, orders }: WorkerDeps): Consumer[] {
-  const consumer = (name: string, build: (logger: Logger) => OrderEventHandler): Consumer => {
-    const logger = consoleLogger(name);
-    return {
-      name,
-      queueName: `charanatech-${name}`,
-      handler: createSqsHandler({ consumer: name, handle: build(logger), processed, logger }),
-    };
+const consumer = (
+  name: string,
+  processed: ProcessedEventStore,
+  build: (logger: Logger) => OrderEventHandler,
+): Consumer => {
+  const logger = consoleLogger(name);
+  return {
+    name,
+    queueName: `charanatech-${name}`,
+    handler: createSqsHandler({ consumer: name, handle: build(logger), processed, logger }),
   };
-  return [
-    consumer('notifications', (logger) => notifyCustomer({ emails, logger, storeUrl })),
-    consumer('fulfillment', (logger) => fulfillOrder({ orders, logger })),
-  ];
+};
+
+/** Correos al cliente (pasos 24 y 32). */
+export const notificationsConsumer = ({
+  processed,
+  emails,
+  storeUrl,
+}: Pick<WorkerDeps, 'processed' | 'emails' | 'storeUrl'>): Consumer =>
+  consumer('notifications', processed, (logger) => notifyCustomer({ emails, logger, storeUrl }));
+
+/** Envío simulado: pide a la API avanzar el pedido (paso 25). */
+export const fulfillmentConsumer = ({
+  processed,
+  orders,
+}: Pick<WorkerDeps, 'processed' | 'orders'>): Consumer =>
+  consumer('fulfillment', processed, (logger) => fulfillOrder({ orders, logger }));
+
+/** Los dos workers de la tienda, ya conectados (el corredor local los usa juntos). */
+export function buildConsumers(deps: WorkerDeps): Consumer[] {
+  return [notificationsConsumer(deps), fulfillmentConsumer(deps)];
 }

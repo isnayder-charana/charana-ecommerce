@@ -1,4 +1,4 @@
-# Lo que NUNCA entra a una imagen de Docker (paso 30): secretos, dependencias
+# Lo que NUNCA entra a una imagen de Docker (pasos 30 y 31): secretos, dependencias
 # de tu PC (se instalan dentro de la imagen) y cosas que no hacen falta.
 **/.env
 **/.env.*
@@ -15,4 +15,4 @@
 docs
 infra
 apps/web
-apps/workers
+# apps/workers entra: tiene su propia imagen (paso 31)

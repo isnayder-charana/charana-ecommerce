@@ -182,27 +182,22 @@ stripe_webhook_secret = "whsec_..."
 
 ```bash
 cd /d/Projects/charanatech
-ECR=$(terraform -chdir=infra/terraform output -raw ecr_repository_url)
-TAG=$(git rev-parse --short HEAD)
-
-aws ecr get-login-password --profile charanatech \
-  | docker login --username AWS --password-stdin "${ECR%%/*}"
-
-docker build --platform linux/amd64 --provenance=false \
-  -f apps/api/Dockerfile -t "$ECR:$TAG" .
-docker push "$ECR:$TAG"
-echo "$TAG"
+bash scripts/ecr-push.sh api
 ```
 
-Qué hace cada línea:
+El script (`scripts/ecr-push.sh`, agregado en el paso 31) hace esto:
 
-- `ECR` es la dirección del registro, algo como `123456789012.dkr.ecr.us-east-2.amazonaws.com/charanatech-api`. `${ECR%%/*}` le quita todo desde la primera `/`: Docker inicia sesión en el servidor, no en el repositorio.
-- `TAG` es el commit actual (7 letras). Cada imagen queda ligada al código exacto con el que se construyó. El registro es *inmutable*: si intentas subir otra imagen con la misma etiqueta, ECR la rechaza.
-- `docker login` usa una contraseña temporal (12 horas) que la CLI pide con tu sesión de `aws login`. Sin llaves guardadas.
+1. Comprueba que no tengas cambios sin commit: la etiqueta de la imagen es el commit actual (7 letras), así cada imagen queda ligada al código exacto con el que se construyó.
+2. Si esa etiqueta ya está en ECR, no hace nada: el registro es *inmutable* y no acepta otra imagen con la misma etiqueta.
+3. Construye la imagen con `--platform linux/amd64 --provenance=false`.
+4. Abre una sesión de Docker en ECR con una contraseña temporal (12 horas) que la CLI pide con tu sesión de `aws login`. Sin llaves guardadas.
+5. Sube la imagen e imprime la línea para `terraform.tfvars`.
 
 La primera vez el build tarda unos minutos. El `push` sube ~150 MB.
 
-Agrega la etiqueta que imprimió el `echo` al final de `terraform.tfvars`:
+> **Por qué un script y no `docker login`.** En Windows, `docker login` intenta guardar la contraseña de ECR en el Administrador de credenciales, y este la rechaza por larga: `error storing credentials ... The stub received bad data`. Te pasó en este paso. El script escribe la sesión en una configuración de Docker aparte (`DOCKER_CONFIG`), solo para ese `push`, y la borra al terminar.
+
+Agrega la línea que imprimió al final de `terraform.tfvars`:
 
 ```hcl
 api_image_tag = "abc1234"
@@ -285,8 +280,8 @@ Con RDS apagada, `/api/health` sigue respondiendo (no consulta la base), pero `/
 
 | Síntoma | Causa probable | Qué hacer |
 | --- | --- | --- |
-| `docker push` dice `no basic auth credentials` | La sesión de Docker en ECR venció (12 h) | Repite el `docker login` del paso 5 |
-| El `apply` de la Lambda dice `image manifest ... not supported` | Faltó `--provenance=false` | Vuelve a construir con esa opción **y una etiqueta nueva** (haz un commit, o agrega `-2` al `TAG`) |
+| `docker push` dice `no basic auth credentials` | No hay sesión de Docker en ECR | Usa `bash scripts/ecr-push.sh api` (sección 5), no `docker login` |
+| El `apply` de la Lambda dice `image manifest ... not supported` | La imagen se construyó sin `--provenance=false` | Haz un commit nuevo y vuelve a correr el script (la etiqueta cambia) |
 | `/api/health` responde `{"message":"Internal Server Error"}` o `Service Unavailable` | NestJS no arrancó | Mira los logs (paso 8). Si dice `Variables de entorno inválidas`, falta un parámetro en SSM |
 | `/api/products` tarda 30 s y falla | RDS está apagada | Paso 2 |
 | `db:deploy` dice `P1011` o algo de certificado | Falta `~/rds-ca.pem` | Descárgalo como en el paso 29, sección 5 |

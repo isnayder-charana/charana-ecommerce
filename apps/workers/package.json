@@ -17,10 +17,13 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "3.1164.0",
+    "@aws-sdk/client-eventbridge": "3.1164.0",
     "@aws-sdk/client-ses": "3.1164.0",
     "@aws-sdk/client-sns": "3.1164.0",
     "@aws-sdk/client-sqs": "3.1164.0",
+    "@aws-sdk/client-ssm": "3.1164.0",
     "@aws-sdk/lib-dynamodb": "3.1164.0",
+    "@aws-sdk/util-dynamodb": "3.996.9",
     "zod": "4.6.7"
   },
   "devDependencies": {

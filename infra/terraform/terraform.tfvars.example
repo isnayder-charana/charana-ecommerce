@@ -18,3 +18,7 @@ stripe_secret_key = "sk_test_..."
 stripe_webhook_secret = "whsec_..."
 # La etiqueta de la imagen que subiste a ECR (git rev-parse --short HEAD).
 api_image_tag = "abc1234"
+
+# --- Paso 31 ---
+# La etiqueta de la imagen de los workers (la imprime scripts/ecr-push.sh workers).
+workers_image_tag = "abc1234"

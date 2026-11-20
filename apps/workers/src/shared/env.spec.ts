@@ -6,7 +6,9 @@ describe('loadEnv', () => {
     expect(loadEnv({ SQS_ENDPOINT: '' })).toEqual({
       AWS_REGION: 'us-east-2',
       DYNAMODB_TABLE: 'charanatech',
+      EMAIL_DELIVERY: 'ses',
       EMAIL_FROM: 'no-reply@charanatech.local',
+      EVENT_BUS_NAME: 'charanatech',
       API_URL: 'http://localhost:3000/api',
       STORE_URL: 'http://localhost:3001',
       ALERTS_TOPIC: 'charanatech-alerts',

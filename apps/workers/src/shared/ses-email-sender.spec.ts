@@ -1,7 +1,8 @@
 import type { SendEmailCommand, SESClient } from '@aws-sdk/client-ses';
 import { maskEmail } from './email.js';
 import { loadEnv } from './env.js';
-import { createEmailSender, SesEmailSender } from './ses-email-sender.js';
+import { memoryLogger } from '../../test/support/fixtures.js';
+import { createEmailSender, LoggingEmailSender, SesEmailSender } from './ses-email-sender.js';
 
 describe('SesEmailSender', () => {
   it('envía con SES desde el remitente verificado, en UTF-8, con texto y HTML', async () => {
@@ -45,5 +46,22 @@ describe('maskEmail', () => {
   it('oculta el usuario del correo', () => {
     expect(maskEmail('ana.maria@correo.com')).toBe('a***@correo.com');
     expect(maskEmail('raro')).toBe('r***@');
+  });
+
+  it('con EMAIL_DELIVERY=log no envía: deja el asunto y el correo enmascarado en el log', async () => {
+    const logger = memoryLogger();
+    const sender = createEmailSender(loadEnv({ EMAIL_DELIVERY: 'log' }), logger);
+    expect(sender).toBeInstanceOf(LoggingEmailSender);
+
+    await sender.send({
+      to: 'ana.maria@correo.com',
+      subject: 'Pago confirmado',
+      text: '',
+      html: '',
+    });
+
+    expect(logger.lines).toEqual([
+      '[sin enviar: EMAIL_DELIVERY=log] "Pago confirmado" para a***@correo.com',
+    ]);
   });
 });
