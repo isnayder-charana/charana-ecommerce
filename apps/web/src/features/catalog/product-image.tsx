@@ -30,9 +30,16 @@ export function ProductImage({ name, category, imageUrl, className }: ProductIma
       )}
     >
       {imageUrl ? (
-        // En el paso de imágenes se cambia por <Image> de Next, servido desde S3 + CloudFront.
-        // biome-ignore lint/performance/noImgElement: provisional hasta configurar next/image
-        <img src={imageUrl} alt={name} className="size-full object-cover" />
+        // Las fotos ya llegan optimizadas desde CloudFront (paso 33): pasarlas por
+        // next/image las procesaría otra vez en Vercel, que cobra por imagen.
+        // biome-ignore lint/performance/noImgElement: la foto viene lista del CDN
+        <img
+          src={imageUrl}
+          alt={name}
+          loading="lazy"
+          decoding="async"
+          className="size-full object-cover"
+        />
       ) : (
         <svg
           viewBox="0 0 48 48"

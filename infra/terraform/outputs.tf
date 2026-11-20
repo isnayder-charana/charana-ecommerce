@@ -94,3 +94,15 @@ output "dlq_alarms" {
   description = "Una alarma de CloudWatch por cada DLQ."
   value       = [for alarm in aws_cloudwatch_metric_alarm.dlq : alarm.alarm_name]
 }
+
+# --- Paso 33 --------------------------------------------------------------------
+
+output "product_images_url" {
+  description = "PRODUCT_IMAGES_URL para `pnpm db:seed` contra RDS."
+  value       = "https://${aws_cloudfront_distribution.images.domain_name}/products"
+}
+
+output "product_images_uploaded" {
+  description = "Fotos que Terraform subió al bucket."
+  value       = sort(keys(aws_s3_object.product_image))
+}

@@ -1,6 +1,20 @@
 import type { ProductPrimitives } from '../../domain/index.js';
 
-/** Productos de ejemplo para desarrollo. Las imágenes se agregan en la fase 2. */
+/**
+ * La foto de cada producto se llama como su SKU en minúsculas (paso 33):
+ *
+ *   CT-AUD-001  →  <PRODUCT_IMAGES_URL>/ct-aud-001.jpg
+ *
+ * En tu PC, PRODUCT_IMAGES_URL apunta a apps/web/public/products (la sirve
+ * Next.js); en AWS, a CloudFront. Sin la variable, los productos no tienen foto
+ * y la tienda muestra el dibujo de su categoría.
+ */
+export function productImageUrl(sku: string, baseUrl: string | undefined): string | null {
+  if (!baseUrl) return null;
+  return `${baseUrl.replace(/\/+$/, '')}/${sku.toLowerCase()}.jpg`;
+}
+
+/** Productos de ejemplo para desarrollo. */
 export const PRODUCT_SEED: ProductPrimitives[] = [
   {
     id: '7d1c2b6e-1f0a-4c1e-9a52-0c7f3a9e1001',
