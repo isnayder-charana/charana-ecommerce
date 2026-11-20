@@ -2,6 +2,7 @@ import { SNSClient } from '@aws-sdk/client-sns';
 import { GetQueueUrlCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { DlqMonitor } from './alerts/dlq-monitor.js';
 import { buildConsumers } from './consumers.js';
+import { DynamoDbOrderEmailLog } from './shared/dynamodb-order-email-log.js';
 import {
   createDynamoClient,
   DynamoDbProcessedEventStore,
@@ -36,10 +37,8 @@ const sns = new SNSClient({
   endpoint: env.SNS_ENDPOINT ?? env.SQS_ENDPOINT,
   credentials: localstack,
 });
-const processed = new DynamoDbProcessedEventStore(
-  createDynamoClient(env.AWS_REGION, env.DYNAMODB_ENDPOINT),
-  env.DYNAMODB_TABLE,
-);
+const dynamo = createDynamoClient(env.AWS_REGION, env.DYNAMODB_ENDPOINT);
+const processed = new DynamoDbProcessedEventStore(dynamo, env.DYNAMODB_TABLE);
 
 const stop = new AbortController();
 process.once('SIGINT', () => stop.abort());
@@ -49,6 +48,7 @@ const consumers = buildConsumers({
   processed,
   // En tu PC, SES también es LocalStack: si falta SES_ENDPOINT, se usa el mismo que SQS.
   emails: createEmailSender({ ...env, SES_ENDPOINT: env.SES_ENDPOINT ?? env.SQS_ENDPOINT }),
+  emailHistory: new DynamoDbOrderEmailLog(dynamo, env.DYNAMODB_TABLE),
   storeUrl: env.STORE_URL,
   orders: new HttpOrdersApi(env.API_URL, requireInternalKey(env)),
 });

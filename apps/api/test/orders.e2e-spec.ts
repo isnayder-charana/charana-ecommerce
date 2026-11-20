@@ -63,6 +63,13 @@ describe('Orders (e2e)', () => {
       .expect(201);
 
     await http().get(`/api/orders/${placed.body.id}`).set(customerToken('c-b')).expect(404);
+    await http().get(`/api/orders/${placed.body.id}/emails`).set(customerToken('c-b')).expect(404);
+    // La dueña sí: sin workers (modo memoria) todavía no hay correos.
+    const emails = await http()
+      .get(`/api/orders/${placed.body.id}/emails`)
+      .set(customerToken('c-a'))
+      .expect(200);
+    expect(emails.body).toEqual([]);
   });
 
   it('cancelar dos veces el mismo pedido responde 409', async () => {

@@ -8,6 +8,7 @@ import {
   MAX_PAYMENT_CHECKS,
   refreshInterval,
   countUnits,
+  expectedEmails,
   formatDate,
   orderNumber,
   orderSchema,
@@ -15,6 +16,21 @@ import {
 } from './order';
 
 describe('pedido', () => {
+  it('espera un correo por cada cambio que avisa (crear el pedido no avisa)', () => {
+    expect(expectedEmails(anOrder())).toBe(0);
+    expect(
+      expectedEmails(
+        anOrder({
+          history: [
+            { status: 'PENDING_PAYMENT', at: '2026-11-13T23:13:00.000Z' },
+            { status: 'PAID', at: '2026-11-13T23:14:00.000Z' },
+            { status: 'CANCELLED', at: '2026-11-13T23:15:00.000Z' },
+          ],
+        }),
+      ),
+    ).toBe(2);
+  });
+
   it('valida la respuesta de la API', () => {
     expect(orderSchema.parse(anOrder())).toEqual(anOrder());
     expect(orderSchema.safeParse({ ...anOrder(), status: 'LOST' }).success).toBe(false);

@@ -4,17 +4,29 @@ import { describe, expect, it, vi } from 'vitest';
 import { ana, fakeAdapter } from '@/features/auth/test-helpers';
 import { anOrder, jsonResponse } from '@/test/fixtures';
 import { goTo } from '@/lib/navigation';
+import type { OrderEmail } from './order';
 import { MyOrdersPage, OrderPage } from './order-page';
 import { ordersWrapper } from './test-utils';
 
 // Ir a Stripe es salir de la página: en los tests solo comprobamos a dónde iríamos.
 vi.mock('@/lib/navigation', () => ({ goTo: vi.fn() }));
 
+/**
+ * `fetch` falso: las respuestas van en orden a las peticiones de pedidos.
+ * Los correos del pedido (/emails) se responden aparte, con `emails` (por defecto, ninguno).
+ */
 function mockApi(...responses: Response[]) {
-  const fetchMock = vi.fn();
-  for (const response of responses) fetchMock.mockResolvedValueOnce(response);
-  vi.stubGlobal('fetch', fetchMock);
-  return fetchMock;
+  return mockApiWithEmails([], ...responses).api;
+}
+
+function mockApiWithEmails(emails: OrderEmail[], ...responses: Response[]) {
+  const api = vi.fn();
+  for (const response of responses) api.mockResolvedValueOnce(response);
+  const emailsApi = vi.fn(async (_url: URL, _init: RequestInit) => jsonResponse(emails));
+  vi.stubGlobal('fetch', (url: URL, init: RequestInit) =>
+    String(url).endsWith('/emails') ? emailsApi(url, init) : api(url, init),
+  );
+  return { api, emailsApi };
 }
 
 describe('Mis pedidos', () => {
@@ -217,5 +229,61 @@ describe('Detalle del pedido', () => {
     });
     await userEvent.click(await screen.findByRole('button', { name: 'Cancelar pedido' }));
     expect(screen.getByText('Te devolvemos el dinero', { exact: false })).toBeInTheDocument();
+  });
+
+  it('muestra los correos del pedido, también el que SES no envió (sandbox)', async () => {
+    const shipped = anOrder({
+      status: 'SHIPPED',
+      history: [
+        ...anOrder().history,
+        { status: 'PAID', at: '2026-11-13T23:15:00.000Z' },
+        { status: 'SHIPPED', at: '2026-11-13T23:16:00.000Z' },
+      ],
+    });
+    const { emailsApi } = mockApiWithEmails(
+      [
+        {
+          subject: 'Recibimos tu pago · Pedido D7E25385',
+          text: '¡Gracias por tu compra!\n\nConfirmamos tu pago.',
+          occurredAt: '2026-11-13T23:15:00.000Z',
+          delivered: true,
+        },
+        {
+          subject: 'Tu pedido va en camino · Pedido D7E25385',
+          text: 'Tu pedido salió de nuestro almacén',
+          occurredAt: '2026-11-13T23:16:00.000Z',
+          delivered: false,
+        },
+      ],
+      jsonResponse(shipped),
+    );
+    render(<OrderPage id={id} justPlaced={false} />, {
+      wrapper: ordersWrapper(fakeAdapter(ana).adapter),
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: 'Correos de este pedido' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Enviado a tu correo')).toBeInTheDocument();
+    expect(screen.getByText('No enviado (demo)')).toBeInTheDocument();
+    expect(
+      screen.getByText('el correo que te habríamos enviado', { exact: false }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Tu pedido salió de nuestro almacén')).toBeInTheDocument();
+    const [url, init] = emailsApi.mock.calls[0] as [URL, RequestInit];
+    expect(String(url)).toMatch(`/orders/${id}/emails`);
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer token' });
+  });
+
+  it('un pedido sin pagar no pide correos (todavía no hay)', async () => {
+    const { emailsApi } = mockApiWithEmails([], jsonResponse(anOrder()));
+    render(<OrderPage id={id} justPlaced={false} />, {
+      wrapper: ordersWrapper(fakeAdapter(ana).adapter),
+    });
+    expect(await screen.findByRole('heading', { name: 'Pedido #D7E25385' })).toBeInTheDocument();
+    expect(emailsApi).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('heading', { name: 'Correos de este pedido' }),
+    ).not.toBeInTheDocument();
   });
 });

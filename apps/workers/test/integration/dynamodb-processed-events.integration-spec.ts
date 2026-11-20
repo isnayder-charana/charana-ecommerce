@@ -4,7 +4,8 @@ import {
   DynamoDBClient,
   ResourceNotFoundException,
 } from '@aws-sdk/client-dynamodb';
-import { GetCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDbOrderEmailLog } from '../../src/shared/dynamodb-order-email-log.js';
 import {
   createDynamoClient,
   DynamoDbProcessedEventStore,
@@ -69,5 +70,34 @@ describe('DynamoDbProcessedEventStore (DynamoDB Local)', () => {
       }),
     );
     expect(Item!.expiresAt).toBe(Date.parse('2026-12-01T00:00:00Z') / 1000);
+  });
+
+  it('guarda los correos de un pedido bajo su PK, en orden de fecha y con TTL de 90 días', async () => {
+    const log = new DynamoDbOrderEmailLog(client, TABLE, () => new Date('2026-11-17T00:00:00Z'));
+    const email = (eventId: string, occurredAt: string, delivered: boolean) => ({
+      orderId: 'o-1',
+      eventId,
+      occurredAt,
+      subject: `Asunto ${eventId}`,
+      text: 'Texto',
+      delivered,
+    });
+
+    await log.record(email('e-2', '2026-11-17T12:05:00.000Z', false));
+    await log.record(email('e-1', '2026-11-17T12:00:00.000Z', true));
+    await log.record(email('e-1', '2026-11-17T12:00:00.000Z', true)); // repetido: sobrescribe
+
+    const { Items } = await client.send(
+      new QueryCommand({
+        TableName: TABLE,
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: { ':pk': 'ORDER_EMAIL#o-1' },
+      }),
+    );
+    expect(Items!.map((i) => [i.eventId, i.delivered])).toEqual([
+      ['e-1', true],
+      ['e-2', false],
+    ]);
+    expect(Items![0]!.expiresAt).toBe(Date.parse('2027-02-15T00:00:00Z') / 1000);
   });
 });

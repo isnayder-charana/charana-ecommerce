@@ -13,6 +13,8 @@ import { InMemoryProcessedEventStore } from '../infrastructure/persistence/in-me
 import { FakePaymentGateway } from '../infrastructure/payments/fake-payment.gateway.js';
 import { UnconfiguredPaymentGateway } from '../infrastructure/payments/unconfigured-payment.gateway.js';
 import { InMemoryOrderRepository } from '../infrastructure/persistence/in-memory-order.repository.js';
+import { InMemoryOrderEmailsReader } from '../infrastructure/persistence/in-memory-order-emails.reader.js';
+import { ListOrderEmailsUseCase } from './list-order-emails.use-case.js';
 import { AdvanceOrderStatusUseCase } from './advance-order-status.use-case.js';
 import { CancelOrderUseCase } from './cancel-order.use-case.js';
 import { GetOrderUseCase } from './get-order.use-case.js';
@@ -109,6 +111,35 @@ describe('Casos de uso de Orders', () => {
         OrderNotFoundError,
       );
       await expect(get.execute({ id: 'zzz', customerId: 'c-1' })).rejects.toThrow(
+        OrderNotFoundError,
+      );
+    });
+  });
+
+  describe('ListOrderEmails', () => {
+    it('devuelve los correos de mi pedido en orden, y "no existe" si el pedido es de otro', async () => {
+      await place(undefined, 'c-1');
+      const emails = new InMemoryOrderEmailsReader();
+      const shipped = {
+        subject: 'Tu pedido va en camino',
+        text: '...',
+        occurredAt: '2026-11-10T12:05:00.000Z',
+        delivered: false,
+      };
+      const paid = {
+        ...shipped,
+        subject: 'Recibimos tu pago',
+        occurredAt: '2026-11-10T12:01:00.000Z',
+      };
+      emails.add('o-1', shipped);
+      emails.add('o-1', paid);
+      const list = new ListOrderEmailsUseCase(orders, emails);
+
+      await expect(list.execute({ id: 'o-1', customerId: 'c-1' })).resolves.toEqual([
+        paid,
+        shipped,
+      ]);
+      await expect(list.execute({ id: 'o-1', customerId: 'c-2' })).rejects.toThrow(
         OrderNotFoundError,
       );
     });

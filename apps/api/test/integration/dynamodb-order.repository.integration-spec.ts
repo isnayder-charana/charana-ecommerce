@@ -1,6 +1,7 @@
 import { DeleteTableCommand, ResourceNotFoundException } from '@aws-sdk/client-dynamodb';
-import { GetCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Order } from '../../src/modules/orders/domain/index.js';
+import { DynamoDbOrderEmailsReader } from '../../src/modules/orders/infrastructure/persistence/dynamodb-order-emails.reader.js';
 import { DynamoDbOrderRepository } from '../../src/modules/orders/infrastructure/persistence/dynamodb-order.repository.js';
 import { DynamoDbOutboxStore } from '../../src/modules/orders/infrastructure/persistence/dynamodb-outbox.repository.js';
 import { DynamoDbProcessedEventStore } from '../../src/modules/orders/infrastructure/persistence/dynamodb-processed-event.repository.js';
@@ -199,5 +200,46 @@ describe('DynamoDbOrderRepository (DynamoDB Local)', () => {
         'o-29',
       ]);
     });
+  });
+
+  it('lee los correos que guardó el worker, del más antiguo al más nuevo', async () => {
+    // Así los escribe DynamoDbOrderEmailLog en apps/workers.
+    const put = (eventId: string, occurredAt: string, delivered: boolean) =>
+      client.send(
+        new PutCommand({
+          TableName: TABLE,
+          Item: {
+            PK: 'ORDER_EMAIL#o-1',
+            SK: `${occurredAt}#${eventId}`,
+            entity: 'OrderEmail',
+            orderId: 'o-1',
+            eventId,
+            occurredAt,
+            subject: `Asunto ${eventId}`,
+            text: 'Texto',
+            delivered,
+            expiresAt: 0,
+          },
+        }),
+      );
+    await put('e-2', '2026-11-10T12:05:00.000Z', false);
+    await put('e-1', '2026-11-10T12:00:00.000Z', true);
+
+    const reader = new DynamoDbOrderEmailsReader(client, TABLE);
+    expect(await reader.findByOrder('o-1')).toEqual([
+      {
+        subject: 'Asunto e-1',
+        text: 'Texto',
+        occurredAt: '2026-11-10T12:00:00.000Z',
+        delivered: true,
+      },
+      {
+        subject: 'Asunto e-2',
+        text: 'Texto',
+        occurredAt: '2026-11-10T12:05:00.000Z',
+        delivered: false,
+      },
+    ]);
+    expect(await reader.findByOrder('otro')).toEqual([]);
   });
 });

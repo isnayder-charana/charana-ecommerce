@@ -3,6 +3,7 @@ import type { OrdersApi } from './fulfillment/orders-api.js';
 import { notifyCustomer } from './notifications/notify-customer.js';
 import type { EmailSender } from './shared/email.js';
 import { consoleLogger, type Logger } from './shared/logger.js';
+import type { OrderEmailLog } from './shared/order-email-log.js';
 import type { ProcessedEventStore } from './shared/processed-events.js';
 import { createSqsHandler, type OrderEventHandler, type SqsHandler } from './shared/sqs-handler.js';
 
@@ -17,6 +18,7 @@ export interface Consumer {
 export interface WorkerDeps {
   processed: ProcessedEventStore;
   emails: EmailSender;
+  emailHistory: OrderEmailLog;
   storeUrl: string;
   orders: OrdersApi;
 }
@@ -34,13 +36,16 @@ const consumer = (
   };
 };
 
-/** Correos al cliente (pasos 24 y 32). */
+/** Correos al cliente (pasos 24, 32 y 34). */
 export const notificationsConsumer = ({
   processed,
   emails,
+  emailHistory,
   storeUrl,
-}: Pick<WorkerDeps, 'processed' | 'emails' | 'storeUrl'>): Consumer =>
-  consumer('notifications', processed, (logger) => notifyCustomer({ emails, logger, storeUrl }));
+}: Pick<WorkerDeps, 'processed' | 'emails' | 'emailHistory' | 'storeUrl'>): Consumer =>
+  consumer('notifications', processed, (logger) =>
+    notifyCustomer({ emails, history: emailHistory, logger, storeUrl }),
+  );
 
 /** Envío simulado: pide a la API avanzar el pedido (paso 25). */
 export const fulfillmentConsumer = ({
