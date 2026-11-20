@@ -20,6 +20,8 @@ import { InternalOrdersController } from './infrastructure/http/internal-orders.
 import { CancelOrderUseCase } from './application/cancel-order.use-case.js';
 import { GetOrderUseCase } from './application/get-order.use-case.js';
 import { ListMyOrdersUseCase } from './application/list-my-orders.use-case.js';
+import { ListOrderEmailsUseCase } from './application/list-order-emails.use-case.js';
+import { ORDER_EMAILS_READER, type OrderEmailsReader } from './application/order-emails.js';
 import { ORDER_REPOSITORY, type OrderRepository } from './application/order.repository.js';
 import { PlaceOrderUseCase } from './application/place-order.use-case.js';
 import {
@@ -47,6 +49,8 @@ import { DynamoDbProcessedEventStore } from './infrastructure/persistence/dynamo
 import { InMemoryProcessedEventStore } from './infrastructure/persistence/in-memory-processed-event.store.js';
 import { StripePaymentGateway } from './infrastructure/payments/stripe-payment.gateway.js';
 import { UnconfiguredPaymentGateway } from './infrastructure/payments/unconfigured-payment.gateway.js';
+import { DynamoDbOrderEmailsReader } from './infrastructure/persistence/dynamodb-order-emails.reader.js';
+import { InMemoryOrderEmailsReader } from './infrastructure/persistence/in-memory-order-emails.reader.js';
 import { DynamoDbOrderRepository } from './infrastructure/persistence/dynamodb-order.repository.js';
 import { InMemoryOrderRepository } from './infrastructure/persistence/in-memory-order.repository.js';
 
@@ -134,6 +138,21 @@ const PAYMENT_WINDOW_MINUTES = 30;
       provide: GetOrderUseCase,
       inject: [ORDER_REPOSITORY],
       useFactory: (orders: OrderRepository) => new GetOrderUseCase(orders),
+    },
+    {
+      // Paso 34: los correos de cada pedido (los guarda el worker notifications).
+      provide: ORDER_EMAILS_READER,
+      inject: [ConfigService, DYNAMODB_CLIENT],
+      useFactory: (config: ConfigService<Env, true>, dynamo: DynamoDBDocumentClient | null) =>
+        config.get('PERSISTENCE', { infer: true }) === 'database' && dynamo
+          ? new DynamoDbOrderEmailsReader(dynamo, config.get('DYNAMODB_TABLE', { infer: true }))
+          : new InMemoryOrderEmailsReader(),
+    },
+    {
+      provide: ListOrderEmailsUseCase,
+      inject: [ORDER_REPOSITORY, ORDER_EMAILS_READER],
+      useFactory: (orders: OrderRepository, emails: OrderEmailsReader) =>
+        new ListOrderEmailsUseCase(orders, emails),
     },
     {
       provide: CancelOrderUseCase,

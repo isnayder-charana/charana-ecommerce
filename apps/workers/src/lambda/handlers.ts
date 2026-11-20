@@ -3,6 +3,7 @@ import { unmarshall } from '@aws-sdk/util-dynamodb';
 import type { DynamoDBStreamEvent, SQSEvent } from 'aws-lambda';
 import { fulfillmentConsumer, notificationsConsumer } from '../consumers.js';
 import { createOutboxRelay, type Unmarshall } from '../shared/outbox-relay.js';
+import { DynamoDbOrderEmailLog } from '../shared/dynamodb-order-email-log.js';
 import { DynamoDbOutboxCleaner } from '../shared/dynamodb-outbox.js';
 import {
   createDynamoClient,
@@ -35,6 +36,7 @@ export function buildHandler(
       const { handler } = notificationsConsumer({
         processed,
         emails: createEmailSender(env),
+        emailHistory: new DynamoDbOrderEmailLog(dynamo, env.DYNAMODB_TABLE),
         storeUrl: env.STORE_URL,
       });
       return (event) => handler(event as SQSEvent);

@@ -91,6 +91,7 @@ pnpm install
 33. [Paso 31 (fase 4): los eventos y los workers se mudan a AWS](docs/pasos/31-eventos-en-aws.md)
 34. [Paso 32 (fase 4): correos de verdad y alarmas que te escriben](docs/pasos/32-correos-y-alertas.md)
 35. [Paso 33 (fase 4): fotos de los productos en S3 + CloudFront](docs/pasos/33-fotos-cloudfront.md)
+36. [Paso 34 (fase 4): la tienda sale a internet en Vercel](docs/pasos/34-tienda-en-vercel.md)
 
 ## Créditos de las fotos
 

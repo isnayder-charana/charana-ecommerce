@@ -31,6 +31,17 @@ export const orderSchema = z.object({
 });
 export const orderListSchema = z.array(orderSchema);
 
+/** Un correo del pedido (OrderEmailView en apps/api). */
+export const orderEmailSchema = z.object({
+  subject: z.string(),
+  text: z.string(),
+  occurredAt: z.string(),
+  /** false: SES en sandbox no lo envió; la tienda lo muestra igual. */
+  delivered: z.boolean(),
+});
+export const orderEmailListSchema = z.array(orderEmailSchema);
+export type OrderEmail = z.infer<typeof orderEmailSchema>;
+
 export type Order = z.infer<typeof orderSchema>;
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -70,6 +81,17 @@ export function refreshInterval(
   }
   return status === 'PAID' || status === 'SHIPPED' ? FULFILLMENT_CHECK_MS : false;
 }
+
+/** Los estados que avisan por correo (crear el pedido no avisa: aún no está pagado). */
+const NOTIFIED: readonly OrderStatus[] = ['PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+
+/** Cuántos correos debería tener ya el pedido: uno por cada cambio que avisa. */
+export function expectedEmails(order: Pick<Order, 'history'>): number {
+  return order.history.filter((step) => NOTIFIED.includes(step.status)).length;
+}
+
+/** Cuántas veces preguntamos, como máximo, por un correo que no llega (cada 5 s = 1 minuto). */
+export const MAX_EMAIL_CHECKS = 12;
 
 export function canCancel(order: Pick<Order, 'status'>): boolean {
   return order.status === 'PENDING_PAYMENT' || order.status === 'PAID';

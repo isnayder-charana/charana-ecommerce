@@ -21,6 +21,7 @@ import { AdvanceOrderStatusUseCase } from '../../application/advance-order-statu
 import { CancelOrderUseCase } from '../../application/cancel-order.use-case.js';
 import { GetOrderUseCase } from '../../application/get-order.use-case.js';
 import { ListMyOrdersUseCase } from '../../application/list-my-orders.use-case.js';
+import { ListOrderEmailsUseCase } from '../../application/list-order-emails.use-case.js';
 import { PlaceOrderUseCase } from '../../application/place-order.use-case.js';
 import { StartCheckoutUseCase } from '../../application/start-checkout.use-case.js';
 import { CustomerId } from './customer-id.decorator.js';
@@ -39,6 +40,7 @@ export class OrdersController {
     private readonly placeOrder: PlaceOrderUseCase,
     private readonly listMyOrders: ListMyOrdersUseCase,
     private readonly getOrder: GetOrderUseCase,
+    private readonly listOrderEmails: ListOrderEmailsUseCase,
     private readonly cancelOrder: CancelOrderUseCase,
     private readonly advanceStatus: AdvanceOrderStatusUseCase,
     private readonly startCheckout: StartCheckoutUseCase,
@@ -80,6 +82,16 @@ export class OrdersController {
   @ApiOperation({ summary: 'Detalle de uno de mis pedidos' })
   get(@CustomerId() customerId: string, @OrderId() id: string) {
     return this.getOrder.execute({ id, customerId });
+  }
+
+  @Get(':id/emails')
+  @ApiOperation({
+    summary: 'Los correos de uno de mis pedidos',
+    description:
+      'Incluye los que SES no envió por estar en sandbox (delivered: false): la tienda los muestra como "el correo que te habríamos enviado".',
+  })
+  emails(@CustomerId() customerId: string, @OrderId() id: string) {
+    return this.listOrderEmails.execute({ id, customerId });
   }
 
   @Post(':id/cancel')

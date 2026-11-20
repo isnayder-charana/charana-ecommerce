@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import { z } from 'zod';
 import { ApiError, apiRequest } from '@/lib/api-client';
-import { orderListSchema, orderSchema } from './order';
+import { orderEmailListSchema, orderListSchema, orderSchema } from './order';
 
 type GetToken = () => Promise<string | null>;
 
@@ -23,6 +23,26 @@ export const orderQuery = (userId: string, id: string, getToken: GetToken) =>
     queryFn: async ({ signal }) =>
       apiRequest(`/orders/${id}`, orderSchema, { token: await getToken(), signal }),
     retry: (failureCount, error) => !isClientError(error) && failureCount < 1,
+  });
+
+/**
+ * Los correos del pedido. `expected` va en la queryKey: cuando el pedido cambia
+ * de estado se pide la lista otra vez, sin esperar al siguiente intervalo.
+ */
+export const orderEmailsQuery = (
+  userId: string,
+  id: string,
+  expected: number,
+  getToken: GetToken,
+) =>
+  queryOptions({
+    queryKey: ['orders', userId, id, 'emails', expected],
+    queryFn: async ({ signal }) =>
+      apiRequest(`/orders/${id}/emails`, orderEmailListSchema, {
+        token: await getToken(),
+        signal,
+      }),
+    retry: false,
   });
 
 export async function cancelOrder(id: string, getToken: GetToken) {

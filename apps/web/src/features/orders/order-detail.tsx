@@ -17,6 +17,7 @@ import {
   refreshInterval,
   STATUS_LABELS,
 } from './order';
+import { OrderEmails } from './order-emails';
 import { OrderStatusBadge } from './order-status-badge';
 import { PayButton } from './pay-button';
 import { cancelOrder, isClientError, orderQuery } from './orders.queries';
@@ -91,68 +92,71 @@ export function OrderDetail({
 
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <section aria-labelledby="titulo-pedido" className="rounded-card bg-surface px-4 sm:px-6">
-        <div className="flex flex-wrap items-center gap-3 border-b border-line py-4">
-          <h1 id="titulo-pedido" className="text-xl font-bold">
-            Pedido #{orderNumber(order)}
-          </h1>
-          <OrderStatusBadge status={order.status} />
-          <span className="text-sm text-muted sm:ml-auto">{formatDate(order.createdAt)}</span>
-        </div>
-
-        {payment === 'exito' && order.status === 'PAID' && (
-          <div className="pt-4">
-            <FormAlert tone="success">
-              ¡Pago confirmado! Te avisaremos cuando tu pedido salga del almacén.
-            </FormAlert>
+      <div className="flex min-w-0 flex-col gap-5">
+        <section aria-labelledby="titulo-pedido" className="rounded-card bg-surface px-4 sm:px-6">
+          <div className="flex flex-wrap items-center gap-3 border-b border-line py-4">
+            <h1 id="titulo-pedido" className="text-xl font-bold">
+              Pedido #{orderNumber(order)}
+            </h1>
+            <OrderStatusBadge status={order.status} />
+            <span className="text-sm text-muted sm:ml-auto">{formatDate(order.createdAt)}</span>
           </div>
-        )}
-        {order.status === 'PENDING_PAYMENT' && (justPlaced || payment) && (
-          <div className="pt-4">
-            {payment === 'exito' ? (
-              <FormAlert tone="success">
-                ¡Gracias! Stripe está confirmando tu pago. En cuanto avise, el pedido pasará a
-                Pagado.
-              </FormAlert>
-            ) : payment === 'cancelado' ? (
-              <FormAlert tone="info">
-                No se completó el pago. Tu pedido sigue reservado: puedes pagarlo cuando quieras.
-              </FormAlert>
-            ) : (
-              <FormAlert tone="success">
-                ¡Pedido creado! Reservamos el stock para ti. Págalo con Stripe para confirmarlo.
-              </FormAlert>
-            )}
-          </div>
-        )}
 
-        <ul className="divide-y divide-line">
-          {order.lines.map((line) => (
-            <li key={line.productId} className="flex items-center gap-4 py-4">
-              <span className="flex min-w-0 flex-1 flex-col">
-                <Link
-                  href={`/productos/${line.productId}`}
-                  className="font-semibold hover:text-action"
-                >
-                  {line.name}
-                </Link>
-                <span className="text-sm text-muted">
-                  {line.quantity} × {formatMoney(line.unitPrice.cents, line.unitPrice.currency)}
+          {payment === 'exito' && order.status === 'PAID' && (
+            <div className="pt-4">
+              <FormAlert tone="success">
+                ¡Pago confirmado! Te avisaremos cuando tu pedido salga del almacén.
+              </FormAlert>
+            </div>
+          )}
+          {order.status === 'PENDING_PAYMENT' && (justPlaced || payment) && (
+            <div className="pt-4">
+              {payment === 'exito' ? (
+                <FormAlert tone="success">
+                  ¡Gracias! Stripe está confirmando tu pago. En cuanto avise, el pedido pasará a
+                  Pagado.
+                </FormAlert>
+              ) : payment === 'cancelado' ? (
+                <FormAlert tone="info">
+                  No se completó el pago. Tu pedido sigue reservado: puedes pagarlo cuando quieras.
+                </FormAlert>
+              ) : (
+                <FormAlert tone="success">
+                  ¡Pedido creado! Reservamos el stock para ti. Págalo con Stripe para confirmarlo.
+                </FormAlert>
+              )}
+            </div>
+          )}
+
+          <ul className="divide-y divide-line">
+            {order.lines.map((line) => (
+              <li key={line.productId} className="flex items-center gap-4 py-4">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <Link
+                    href={`/productos/${line.productId}`}
+                    className="font-semibold hover:text-action"
+                  >
+                    {line.name}
+                  </Link>
+                  <span className="text-sm text-muted">
+                    {line.quantity} × {formatMoney(line.unitPrice.cents, line.unitPrice.currency)}
+                  </span>
                 </span>
-              </span>
-              <span className="font-semibold tabular-nums">
-                {formatMoney(line.subtotal.cents, line.subtotal.currency)}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="flex justify-between border-t border-line py-4 text-base font-bold">
-          <span>Total</span>
-          <span className="tabular-nums">
-            {formatMoney(order.total.cents, order.total.currency)}
-          </span>
-        </div>
-      </section>
+                <span className="font-semibold tabular-nums">
+                  {formatMoney(line.subtotal.cents, line.subtotal.currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex justify-between border-t border-line py-4 text-base font-bold">
+            <span>Total</span>
+            <span className="tabular-nums">
+              {formatMoney(order.total.cents, order.total.currency)}
+            </span>
+          </div>
+        </section>
+        <OrderEmails user={user} order={order} />
+      </div>
 
       <aside
         aria-label="Estado del pedido"

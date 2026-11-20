@@ -56,6 +56,24 @@ data "aws_iam_policy_document" "queue_worker" {
     }
   }
 
+  # Paso 34: notifications guarda una copia de cada correo (ORDER_EMAIL#<pedido>)
+  # para que la tienda la muestre en la página del pedido. Solo puede escribir, no leer.
+  dynamic "statement" {
+    for_each = each.key == "notifications" ? [1] : []
+
+    content {
+      sid       = "OrderEmailCopies"
+      actions   = ["dynamodb:PutItem"]
+      resources = [local.table_arn]
+
+      condition {
+        test     = "ForAllValues:StringLike"
+        variable = "dynamodb:LeadingKeys"
+        values   = ["ORDER_EMAIL#*"]
+      }
+    }
+  }
+
   # Solo notifications envía correos, y solo desde el remitente de la tienda.
   # En el sandbox, SES revisa el permiso también contra cada destinatario
   # verificado: por eso el recurso es identity/* y lo que se limita es el remitente.

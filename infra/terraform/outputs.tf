@@ -106,3 +106,17 @@ output "product_images_uploaded" {
   description = "Fotos que Terraform subió al bucket."
   value       = sort(keys(aws_s3_object.product_image))
 }
+
+# --- Paso 34 --------------------------------------------------------------------
+
+output "vercel_environment" {
+  description = "Variables de la tienda en Vercel: copia el texto y pégalo en Settings → Environment Variables."
+  value       = <<-EOT
+    NEXT_PUBLIC_API_URL=${aws_apigatewayv2_api.api.api_endpoint}/api
+    NEXT_PUBLIC_AUTH_MODE=cognito
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID=${aws_cognito_user_pool.store.id}
+    NEXT_PUBLIC_COGNITO_CLIENT_ID=${aws_cognito_user_pool_client.store.id}
+    NEXT_PUBLIC_COGNITO_DOMAIN=${aws_cognito_user_pool_domain.store.domain}.auth.${var.aws_region}.amazoncognito.com
+    ENABLE_EXPERIMENTAL_COREPACK=1
+  EOT
+}
