@@ -90,3 +90,17 @@ pnpm install
 32. [Paso 30 (fase 4): la API sale a internet en Lambda](docs/pasos/30-api-en-lambda.md)
 33. [Paso 31 (fase 4): los eventos y los workers se mudan a AWS](docs/pasos/31-eventos-en-aws.md)
 34. [Paso 32 (fase 4): correos de verdad y alarmas que te escriben](docs/pasos/32-correos-y-alertas.md)
+35. [Paso 33 (fase 4): fotos de los productos en S3 + CloudFront](docs/pasos/33-fotos-cloudfront.md)
+
+## Créditos de las fotos
+
+Las fotos de los productos son de [Unsplash](https://unsplash.com) y se usan bajo su licencia gratuita. Gracias a sus autores:
+
+| Producto                     | Archivo          | Foto de     |
+| ---------------------------- | ---------------- | ----------- |
+| Audífonos inalámbricos Pulse | `ct-aud-001.jpg` | _pendiente_ |
+| Cargador GaN 65W             | `ct-chg-001.jpg` | _pendiente_ |
+| Cable USB-C trenzado 2 m     | `ct-cab-001.jpg` | _pendiente_ |
+| Teclado mecánico compacto    | `ct-per-001.jpg` | _pendiente_ |
+| Mouse ergonómico vertical    | `ct-per-002.jpg` | _pendiente_ |
+| SSD portátil 1 TB            | `ct-sto-001.jpg` | _pendiente_ |
