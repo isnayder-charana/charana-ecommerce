@@ -178,6 +178,7 @@ La imagen debe terminar en `:` más el mismo commit que imprimió `git rev-parse
 | Se queda en **Waiting** | Espera tu aprobación | **Review deployments → Approve and deploy** |
 | `AccessDeniedException` en `UpdateFunctionCode` | El rol no tiene esa función en su política | Pégame el log |
 | Falla **Comprobar que la API responde** | La API no arranca con la imagen nueva | Mira `aws logs tail /aws/lambda/charanatech-api --since 10m`; vuelve a desplegar el commit anterior con `ecr-push.sh` y la consola de Lambda |
+| **Comprobar que la API responde** falla por *timeout* | `API_URL` mal escrita (sin `https://`, con `/api`, barra o espacio al final) | Corrígela en **Settings → Secrets and variables → Actions → Variables** y vuelve a lanzar **Deploy** |
 
 ## Costo
 
