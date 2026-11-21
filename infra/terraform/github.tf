@@ -13,6 +13,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 locals {
   deploy_role_name = "charanatech-github-deploy"
+  github_owner     = split("/", var.github_repository)[0]
+  github_repo      = split("/", var.github_repository)[1]
 
   # Lo que el despliegue actualiza: la API y los tres workers.
   deployed_functions = [
@@ -41,10 +43,16 @@ data "aws_iam_policy_document" "github_deploy_trust" {
 
     # ...y venir de ESTE repositorio, en el environment "production". Un PR
     # (o un fork) nunca está en ese environment, así que no puede asumir el rol.
+    # Dos formatos, los dos exactos (StringEquals con varios valores = "cualquiera"):
+    # el nuevo, con ID inmutables, que usan los repos creados desde julio de 2026
+    # (este), y el clásico, por si GitHub lo vuelve a enviar.
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:environment:production"]
+      values = [
+        "repo:${local.github_owner}@${var.github_owner_id}/${local.github_repo}@${var.github_repository_id}:environment:production",
+        "repo:${var.github_repository}:environment:production",
+      ]
     }
   }
 }
