@@ -120,3 +120,10 @@ output "vercel_environment" {
     ENABLE_EXPERIMENTAL_COREPACK=1
   EOT
 }
+
+# --- Paso 36 --------------------------------------------------------------------
+
+output "github_deploy_role_arn" {
+  description = "Va en GitHub: Settings → Secrets and variables → Actions → Variables → AWS_DEPLOY_ROLE_ARN."
+  value       = aws_iam_role.github_deploy.arn
+}

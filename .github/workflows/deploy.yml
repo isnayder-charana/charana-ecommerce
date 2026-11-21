@@ -1,0 +1,126 @@
+# Paso 36: despliegue continuo (CD). Cuando el CI de main termina en verde,
+# construye las imágenes de la API y los workers, las sube a ECR y cambia la
+# imagen de las cuatro Lambdas. Espera tu aprobación (environment "production").
+#
+# La tienda no pasa por aquí: Vercel la publica sola en cada push a main.
+# La infraestructura tampoco: esa sigue saliendo de tu PC con terraform plan/apply.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Botón "Run workflow" en la pestaña Actions: vuelve a desplegar main.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un despliegue a la vez, y nunca se cancela uno a medias.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+
+jobs:
+  deploy:
+    name: Desplegar API y workers
+    # - Sin AWS_DEPLOY_ROLE_ARN (antes de configurar el paso 36) no hace nada.
+    # - Solo con el CI en verde de un PUSH a main de ESTE repo: un PR desde un
+    #   fork con una rama llamada "main" no dispara el despliegue.
+    if: >-
+      vars.AWS_DEPLOY_ROLE_ARN != '' && (
+        github.event_name == 'workflow_dispatch' || (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # El environment pide tu aprobación y es la condición del rol de AWS:
+    # solo un job en "production" puede asumirlo.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write # para pedirle a GitHub el token OIDC
+    env:
+      # El commit que pasó el CI (o el último de main, si lo lanzas a mano).
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      API_URL: ${{ vars.API_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+
+      # Cambia el token OIDC de GitHub por credenciales temporales del rol.
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Entrar a ECR
+        id: ecr
+        run: |
+          registry="$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com"
+          aws ecr get-login-password | docker login --username AWS --password-stdin "$registry"
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          # La misma etiqueta que scripts/ecr-push.sh: el commit corto.
+          echo "tag=${SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Construir y subir las imágenes
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.ecr.outputs.tag }}
+        run: |
+          for app in api workers; do
+            image="$REGISTRY/charanatech-$app:$TAG"
+            # Las etiquetas de ECR son inmutables: si ya existe (por ejemplo,
+            # la subiste con ecr-push.sh), se reutiliza.
+            if aws ecr describe-images --repository-name "charanatech-$app" \
+                 --image-ids imageTag="$TAG" >/dev/null 2>&1; then
+              echo "$image ya existe: se reutiliza"
+              continue
+            fi
+            docker build --platform linux/amd64 --provenance=false \
+              -f "apps/$app/Dockerfile" -t "$image" .
+            docker push "$image"
+          done
+
+      - name: Cambiar la imagen de las Lambdas
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.ecr.outputs.tag }}
+        run: |
+          deploy() {
+            aws lambda update-function-code --function-name "$1" \
+              --image-uri "$REGISTRY/$2:$TAG" --query LastUpdateStatus --output text
+          }
+          deploy charanatech-api charanatech-api
+          for worker in notifications fulfillment outbox-relay; do
+            deploy "charanatech-$worker" charanatech-workers
+          done
+          # Espera a que cada función termine de cambiar (falla si alguna no puede).
+          for fn in api notifications fulfillment outbox-relay; do
+            aws lambda wait function-updated-v2 --function-name "charanatech-$fn"
+            echo "charanatech-$fn: $(aws lambda get-function --function-name "charanatech-$fn" \
+              --query Code.ImageUri --output text)"
+          done
+
+      - name: Comprobar que la API responde
+        if: env.API_URL != ''
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors "$API_URL/api/health"
+
+      - name: Resumen
+        env:
+          TAG: ${{ steps.ecr.outputs.tag }}
+        run: |
+          {
+            echo "### Desplegado \`$TAG\`"
+            echo ""
+            echo "API y workers (notifications, fulfillment, outbox-relay) con la imagen \`$TAG\`."
+          } >> "$GITHUB_STEP_SUMMARY"

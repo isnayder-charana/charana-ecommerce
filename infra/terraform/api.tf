@@ -122,6 +122,10 @@ resource "aws_lambda_function" "api" {
   }
 
   lifecycle {
+    # Paso 36: la imagen la actualiza el despliegue de GitHub Actions
+    # (deploy.yml). Terraform solo pone la primera; después no la toca.
+    ignore_changes = [image_uri]
+
     precondition {
       condition     = var.api_image_tag != null
       error_message = "Falta api_image_tag en terraform.tfvars: la etiqueta de la imagen que subiste a ECR (paso 30, sección 5)."

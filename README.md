@@ -95,6 +95,7 @@ pnpm install
 35. [Paso 33 (fase 4): fotos de los productos en S3 + CloudFront](docs/pasos/33-fotos-cloudfront.md)
 36. [Paso 34 (fase 4): la tienda sale a internet en Vercel](docs/pasos/34-tienda-en-vercel.md)
 37. [Paso 35 (fase 4): cada pull request se revisa solo (CI)](docs/pasos/35-ci-en-pull-requests.md)
+38. [Paso 36 (fase 4): despliegue continuo con OIDC, sin claves guardadas](docs/pasos/36-despliegue-continuo-oidc.md)
 
 ## Créditos de las fotos
 

@@ -103,6 +103,12 @@ resource "aws_lambda_function" "this" {
     })
   }
 
+  # Paso 36: la imagen la actualiza el despliegue de GitHub Actions
+  # (deploy.yml). Terraform solo pone la primera; después no la toca.
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
+
   # Lambda revisa los permisos al conectar la cola o el stream: la política
   # tiene que existir antes que la función.
   depends_on = [aws_iam_role_policy.this]

@@ -106,7 +106,7 @@ variable "stripe_webhook_secret" {
 }
 
 variable "api_image_tag" {
-  description = "Etiqueta de la imagen de la API en ECR: el commit corto de git (git rev-parse --short HEAD)."
+  description = "Etiqueta de la PRIMERA imagen de la API en ECR (git rev-parse --short HEAD). Desde el paso 36, las siguientes las despliega GitHub Actions."
   type        = string
   default     = null
 }
@@ -114,7 +114,7 @@ variable "api_image_tag" {
 # --- Paso 31: eventos y workers --------------------------------------------------
 
 variable "workers_image_tag" {
-  description = "Etiqueta de la imagen de los workers en ECR (la imprime scripts/ecr-push.sh workers)."
+  description = "Etiqueta de la PRIMERA imagen de los workers en ECR (scripts/ecr-push.sh workers). Desde el paso 36, las siguientes las despliega GitHub Actions."
   type        = string
   default     = null
 }
@@ -157,4 +157,12 @@ variable "ses_verified_recipients" {
   description = "Correos extra que pueden recibir mensajes mientras SES esté en sandbox (cada uno se verifica con un enlace)."
   type        = list(string)
   default     = []
+}
+
+# --- Paso 36: despliegue desde GitHub Actions ------------------------------------
+
+variable "github_repository" {
+  description = "Repositorio (dueño/nombre) cuyo workflow de despliegue puede asumir el rol de AWS."
+  type        = string
+  default     = "isnayder-charana/charana-ecommerce"
 }
