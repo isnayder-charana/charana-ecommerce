@@ -1,0 +1,115 @@
+# Paso 35: revisa cada pull request antes de fusionarlo (y main después de fusionar).
+# Los cuatro trabajos corren en paralelo; los nombres son los "checks" que exige main.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Solo lectura: este workflow no publica nada ni toca AWS.
+permissions:
+  contents: read
+
+# Si subes otro commit al mismo PR, se cancela la revisión anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: 26.13.0
+  TERRAFORM_VERSION: 1.17.1
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  checks:
+    name: Formato, lint, tipos y tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # Acciones fijadas por SHA (no por etiqueta): una etiqueta se puede mover, un SHA no.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Sin "version": usa la de packageManager en package.json (la misma que en tu PC).
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      # Tests de las tres apps con cobertura: falla si baja del 80 %.
+      - run: pnpm test:cov
+      - name: Build de la tienda
+        run: pnpm --filter @charanatech/web build
+
+  integration:
+    name: Tests de integración (MySQL y DynamoDB)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Las mismas imágenes de compose.yaml, como contenedores de servicio.
+    services:
+      mysql:
+        image: mysql:8.4.13
+        env:
+          MYSQL_DATABASE: charanatech_test
+          MYSQL_USER: charanatech
+          MYSQL_PASSWORD: charanatech
+          MYSQL_ROOT_PASSWORD: root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+      dynamodb:
+        image: amazon/dynamodb-local:3.3.2
+        ports: ['8000:8000']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @charanatech/api test:integration
+      - run: pnpm --filter @charanatech/workers test:integration
+
+  terraform:
+    name: Terraform (formato y validación)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive
+      # Sin backend: no necesita credenciales de AWS ni lee el estado.
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+
+  images:
+    name: Imágenes Docker (API y workers)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Las mismas opciones que scripts/ecr-push.sh, pero sin subirlas a ECR (eso es el paso 36).
+      - name: Build de la API
+        run: docker build --platform linux/amd64 --provenance=false -f apps/api/Dockerfile -t charanatech-api:ci .
+      - name: Build de los workers
+        run: docker build --platform linux/amd64 --provenance=false -f apps/workers/Dockerfile -t charanatech-workers:ci .
