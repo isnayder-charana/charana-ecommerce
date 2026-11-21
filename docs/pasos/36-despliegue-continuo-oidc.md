@@ -40,8 +40,10 @@ No hay nada que robar: no existe una clave guardada en ningún lado.
 La condición del rol es exacta:
 
 ```
-token.actions.githubusercontent.com:sub = repo:isnayder-charana/charana-ecommerce:environment:production
+token.actions.githubusercontent.com:sub = repo:isnayder-charana@134728698/charana-ecommerce@1463310450:environment:production
 ```
+
+Los números son los **ID inmutables** del dueño y del repositorio. Desde julio de 2026, GitHub firma así los tokens de los repos nuevos, como este: el nombre puede cambiar, pero el ID no. Por eso, si alguien borra el repo y crea otro con el mismo nombre, tampoco entra. El rol acepta también el formato clásico, sin números, por si GitHub lo vuelve a enviar.
 
 - Otro repositorio, o un *fork*, tiene otro `repo:`. No entra.
 - El CI de un pull request no corre en el environment `production`. No entra.
@@ -172,7 +174,7 @@ La imagen debe terminar en `:` más el mismo commit que imprimió `git rev-parse
 | Síntoma | Causa probable | Qué hacer |
 | --- | --- | --- |
 | **Deploy** sale como *skipped* | Falta la variable `AWS_DEPLOY_ROLE_ARN`, o el CI de `main` falló | Paso 4; revisa el CI |
-| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | El environment no se llama exactamente `production`, o el repo cambió de nombre | Revisa el nombre; si cambió el repo, ajusta `github_repository` en Terraform |
+| `Not authorized to perform sts:AssumeRoleWithWebIdentity` | El environment no se llama exactamente `production`, o el token trae otro `sub` (repo renombrado o recreado) | Revisa el nombre del environment; si cambió el repo, ajusta `github_repository`, `github_owner_id` y `github_repository_id` en Terraform |
 | Se queda en **Waiting** | Espera tu aprobación | **Review deployments → Approve and deploy** |
 | `AccessDeniedException` en `UpdateFunctionCode` | El rol no tiene esa función en su política | Pégame el log |
 | Falla **Comprobar que la API responde** | La API no arranca con la imagen nueva | Mira `aws logs tail /aws/lambda/charanatech-api --since 10m`; vuelve a desplegar el commit anterior con `ecr-push.sh` y la consola de Lambda |

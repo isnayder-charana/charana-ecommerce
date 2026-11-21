@@ -166,3 +166,18 @@ variable "github_repository" {
   type        = string
   default     = "isnayder-charana/charana-ecommerce"
 }
+
+# Los repos creados desde julio de 2026 firman el token OIDC con los ID numéricos
+# del dueño y del repo (no cambian aunque el repo se renombre). Se ven con:
+#   gh api repos/<dueño>/<repo> --jq '{id, owner_id: .owner.id}'
+variable "github_owner_id" {
+  description = "ID numérico del dueño del repositorio en GitHub."
+  type        = number
+  default     = 134728698
+}
+
+variable "github_repository_id" {
+  description = "ID numérico del repositorio en GitHub."
+  type        = number
+  default     = 1463310450
+}
