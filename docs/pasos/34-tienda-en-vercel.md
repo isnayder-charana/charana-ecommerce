@@ -65,7 +65,7 @@ Next.js copia las variables `NEXT_PUBLIC_*` dentro del código que descarga el n
 - Solo van ahí valores públicos: la URL de la API y los ids de Cognito. Nunca un secreto.
 - Si cambias una, tienes que volver a publicar (*Redeploy*) para que la tienda la use.
 
-Para no copiarlas una por una, Terraform las arma: `terraform output -raw vercel_environment`.
+Para no copiarlas una por una, Terraform las arma: `terraform output -raw vercel_environment` (disponible después del primer `apply` de este paso).
 
 ### 4. La URL de la tienda va en tres lugares, y los tres salen de `store_urls`
 
@@ -127,8 +127,15 @@ Primero copia las variables de la tienda:
 
 ```bash
 cd infra/terraform
-terraform output -raw vercel_environment
+echo "NEXT_PUBLIC_API_URL=$(terraform output -raw api_url)/api"
+echo "NEXT_PUBLIC_AUTH_MODE=cognito"
+echo "NEXT_PUBLIC_COGNITO_USER_POOL_ID=$(terraform output -raw user_pool_id)"
+echo "NEXT_PUBLIC_COGNITO_CLIENT_ID=$(terraform output -raw client_id)"
+echo "NEXT_PUBLIC_COGNITO_DOMAIN=$(terraform output -raw login_domain)"
+echo "ENABLE_EXPERIMENTAL_COREPACK=1"
 ```
+
+> Después del `apply` del paso 5 basta con `terraform output -raw vercel_environment`, que imprime lo mismo. Antes no existe: un `output` nuevo solo queda guardado en el estado después de un `apply`.
 
 Imprime 6 líneas, de `NEXT_PUBLIC_API_URL=...` a `ENABLE_EXPERIMENTAL_COREPACK=1`. Selecciónalas y cópialas.
 
