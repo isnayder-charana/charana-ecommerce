@@ -2,17 +2,52 @@
 
 [![CI](https://github.com/isnayder-charana/charana-ecommerce/actions/workflows/ci.yml/badge.svg)](https://github.com/isnayder-charana/charana-ecommerce/actions/workflows/ci.yml)
 
-Tienda de accesorios tecnológicos hecha como pieza de portafolio. El reclutador compra con una tarjeta de prueba de Stripe y ve cómo cambia el estado de su pedido.
+Tienda de accesorios tecnológicos hecha como pieza de portafolio: una tienda real, en producción, con pagos, eventos y despliegue continuo. Puedes comprar con una tarjeta de prueba y ver cómo avanza tu pedido.
+
+**Tienda en vivo: [charana-ecommerce.vercel.app](https://charana-ecommerce.vercel.app)**
+
+## Pruébalo tú (3 minutos)
+
+1. Abre la tienda y pulsa **Iniciar sesión**. Entra con **Google** o crea una cuenta con tu correo.
+2. Agrega uno o dos productos al carrito y pulsa **Continuar compra**.
+3. Pulsa **Pagar con Stripe** y usa la tarjeta de prueba:
+
+   | Campo   | Valor                                |
+   | ------- | ------------------------------------ |
+   | Tarjeta | `4242 4242 4242 4242`                |
+   | Fecha   | cualquier fecha futura, como `12/34` |
+   | CVC     | cualquier número de 3 cifras         |
+   | Nombre  | el que quieras                       |
+
+4. Vuelves a la página del pedido. Quédate ahí: se actualiza sola.
+   - En unos segundos pasa a **Pagado** (Stripe avisó a la API con un webhook).
+   - Unos 15 s después, **Enviado**; otros 15 s, **Entregado**. Lo mueve un worker que escucha los eventos del pedido.
+5. Baja hasta **Correos de este pedido**: son los correos que la tienda te habría enviado en cada paso.
+
+Stripe está en **modo de prueba**: no se cobra nada y la tienda nunca ve los datos de la tarjeta. Detalles en la [página de privacidad](https://charana-ecommerce.vercel.app/privacidad).
+
+## Qué hay detrás
+
+| Área                | Qué usé                                                                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tienda**          | Next.js 16 (App Router, Server Actions), Tailwind, TanStack Query, React Hook Form + Zod, login con Cognito (correo o Google)                                                                      |
+| **API (OrderHub)**  | NestJS con arquitectura hexagonal y DDD, Prisma + MySQL para el catálogo y el stock, DynamoDB para pedidos, Stripe Checkout con webhook firmado                                                    |
+| **Eventos**         | Patrón outbox, EventBridge, SQS con DLQ, workers en Lambda idempotentes, correos con SES, alarmas con CloudWatch y SNS                                                                             |
+| **Infraestructura** | Terraform con estado remoto en S3; API y workers en Lambda (imágenes Docker), API Gateway, RDS, CloudFront + S3 para las fotos, secretos en SSM                                                    |
+| **Calidad y CI/CD** | Vitest y Jest con cobertura mínima del 80 %, tests de integración contra MySQL y DynamoDB reales, GitHub Actions en cada pull request, despliegue con OIDC (sin claves de AWS) y aprobación manual |
+
+Cada decisión está explicada, paso a paso, en la [bitácora](#bitácora-de-aprendizaje).
 
 ## Estructura del monorepo
 
 ```
 charanatech/
 ├─ apps/
-│  ├─ web/       # Next.js 16 (tienda, Vercel)              → fase 2
-│  ├─ api/       # NestJS hexagonal + DDD (OrderHub)        → fase 1
-│  └─ workers/   # Lambdas que consumen eventos (SQS)      → fase 3
-├─ infra/        # Terraform                                → fase 4
+│  ├─ web/       # Next.js 16 (tienda, Vercel)
+│  ├─ api/       # NestJS hexagonal + DDD (OrderHub, Lambda)
+│  └─ workers/   # Lambdas que consumen eventos (SQS)
+├─ infra/        # Terraform (AWS)
+├─ scripts/      # ecr-push.sh y smoke-prod.sh
 └─ docs/pasos/   # Bitácora: qué se hizo en cada paso y por qué
 ```
 
@@ -22,39 +57,76 @@ charanatech/
 flowchart LR
   cliente([Cliente]) --> web["Tienda<br/>Next.js · Vercel"]
   web -- "login" --> cognito[Cognito]
-  web -- "REST + JWT" --> api["OrderHub API<br/>NestJS hexagonal"]
+  web -- "fotos" --> cdn["CloudFront + S3"]
+  web -- "REST + JWT" --> apigw["API Gateway"] --> api["OrderHub API<br/>NestJS · Lambda"]
   web -- "pagar" --> stripe[Stripe Checkout]
-  stripe -- "webhook firmado" --> api
-  api --> mysql[("MySQL<br/>catálogo y stock")]
+  stripe -- "webhook firmado" --> apigw
+  api --> mysql[("RDS MySQL<br/>catálogo y stock")]
   api --> dynamo[("DynamoDB<br/>pedidos + outbox")]
-  dynamo -- "relé del outbox" --> bus{{"EventBridge<br/>bus charanatech"}}
+  dynamo -- "Streams → Lambda<br/>relé del outbox" --> bus{{"EventBridge<br/>bus charanatech"}}
   bus --> qn["SQS<br/>notifications"]
   bus --> qf["SQS fulfillment<br/>retraso 15 s"]
-  qn --> wn["Worker<br/>notifications"]
-  qf --> wf["Worker<br/>fulfillment"]
+  qn --> wn["Lambda<br/>notifications"]
+  qf --> wf["Lambda<br/>fulfillment"]
   wn --> ses[SES] --> correo([Correo al cliente])
-  wf -- "enviar / entregar<br/>X-Internal-Key" --> api
+  wf -- "enviar / entregar<br/>X-Internal-Key" --> apigw
   qn -. "3 fallos" .-> dlq["DLQ"]
   qf -. "3 fallos" .-> dlq
   dlq -. "alarma" .-> sns[SNS alertas] -.-> admin([Administrador])
 ```
 
 1. El cliente paga en **Stripe**. Stripe avisa a la API con un **webhook firmado** y el pedido pasa a **Pagado**.
-2. La API guarda el pedido y su evento `OrderPaid` en **una sola transacción** (outbox). Un relé lo publica en **EventBridge**.
-3. EventBridge reparte el evento a las colas **SQS**. El worker `notifications` envía el correo con **SES**. El worker `fulfillment` espera 15 s (retraso de la cola) y le pide a la API que envíe el pedido. Eso genera `OrderShipped`, y el ciclo se repite hasta **Entregado**.
+2. La API guarda el pedido y su evento `OrderPaid` en **una sola transacción** (outbox). **DynamoDB Streams** dispara el relé, que lo publica en **EventBridge**.
+3. EventBridge reparte el evento a las colas **SQS**. El worker `notifications` envía el correo con **SES** y guarda una copia para la página del pedido. El worker `fulfillment` espera 15 s (retraso de la cola) y le pide a la API que envíe el pedido. Eso genera `OrderShipped`, y el ciclo se repite hasta **Entregado**.
 4. Si un mensaje falla 3 veces, va a su **DLQ** y se avisa al administrador por **SNS**.
 
-En tu PC, EventBridge, SQS, SES y SNS los emula **LocalStack** y DynamoDB es **DynamoDB Local** (`pnpm infra:up`). Detalle de cada pieza en la bitácora (pasos 19 a 26).
+En tu PC, EventBridge, SQS, SES y SNS los emula **LocalStack** y DynamoDB es **DynamoDB Local** (`pnpm infra:up`).
 
-## Requisitos
+### Del commit a producción
+
+```mermaid
+flowchart LR
+  pr[Pull request] --> ci["CI: 4 checks<br/>GitHub Actions"]
+  ci -- "verde + fusión" --> main[main]
+  main --> vercel["Vercel publica<br/>la tienda"]
+  main --> deploy["Deploy<br/>espera mi aprobación"]
+  deploy -- "OIDC: credenciales<br/>de 1 hora" --> ecr[ECR] --> lambdas["4 Lambdas<br/>con la imagen nueva"]
+```
+
+## Costos
+
+Todo corre en una cuenta de AWS con créditos y un límite de gasto activo.
+
+| Qué                                                                   | Al mes, aprox.                   |
+| --------------------------------------------------------------------- | -------------------------------- |
+| RDS MySQL `db.t4g.micro` encendida (instancia, disco e IPv4)          | USD 18                           |
+| Lambda, API Gateway, DynamoDB, SQS, EventBridge, SES, CloudFront, ECR | Centavos (dentro de lo gratuito) |
+| CloudWatch: 3 alarmas                                                 | USD 0.30                         |
+| Vercel Hobby y GitHub Actions (repo público)                          | Gratis                           |
+| **Total**                                                             | **≈ USD 19**                     |
+
+Lo único caro es la base de datos siempre encendida. Lo demás cobra por uso, y una demo casi no lo usa.
+
+## Correr en tu PC
 
 - Node **26.13.0** (ver `.nvmrc`)
 - pnpm **12.18.0** (Node 25+ ya no trae Corepack: se instala con npm)
 
+- Docker (para MySQL, DynamoDB Local y LocalStack)
+
 ```bash
 npm install -g pnpm@12.18.0
 pnpm install
+cp apps/api/.env.example apps/api/.env        # y lo mismo en apps/web y apps/workers
+pnpm infra:up                                 # MySQL, DynamoDB Local y LocalStack
+pnpm --filter @charanatech/api db:deploy
+pnpm --filter @charanatech/api db:tables
+pnpm --filter @charanatech/api db:seed
+pnpm dev                                      # tienda en http://localhost:3001
+pnpm check                                    # formato, lint, tipos y tests
 ```
+
+Los `.env` necesitan las claves de prueba de Stripe y los datos de Cognito: cada guía de la bitácora explica de dónde sale cada valor.
 
 ## Bitácora de aprendizaje
 
@@ -96,6 +168,7 @@ pnpm install
 36. [Paso 34 (fase 4): la tienda sale a internet en Vercel](docs/pasos/34-tienda-en-vercel.md)
 37. [Paso 35 (fase 4): cada pull request se revisa solo (CI)](docs/pasos/35-ci-en-pull-requests.md)
 38. [Paso 36 (fase 4): despliegue continuo con OIDC, sin claves guardadas](docs/pasos/36-despliegue-continuo-oidc.md)
+39. [Paso 37 (fase 4): prueba de punta a punta en producción](docs/pasos/37-prueba-en-produccion.md)
 
 ## Créditos de las fotos
 
